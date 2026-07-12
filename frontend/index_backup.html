@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PolicyGuard | Policy Governance Dashboard</title>
+    
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS v3 via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            500: '#14b8a6', // Teal accent
+                            600: '#0d9488',
+                            950: '#042f2e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Vis.js Network for Interactive Graph rendering -->
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    
+    <!-- Lucide Icons via CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        /* Custom animations & glassmorphism scrollbars */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.3);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.2);
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.4);
+        }
+        .glow-teal {
+            box-shadow: 0 0 20px rgba(20, 184, 166, 0.15);
+        }
+        .glow-red {
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
+        }
+        .glow-amber {
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.15);
+        }
+        /* SVG Gauge animation transition */
+        circle.gauge-progress {
+            transition: stroke-dashoffset 0.8s ease-in-out;
+        }
+    </style>
+</head>
+<body class="h-full font-sans antialiased overflow-hidden flex flex-col">
+
+    <!-- Header Bar -->
+    <header class="flex-shrink-0 bg-slate-900/80 border-b border-slate-800/80 backdrop-blur-md px-6 py-4 flex items-center justify-between z-10">
+        <div class="flex items-center space-x-3">
+            <div class="h-10 w-10 rounded-lg bg-gradient-to-tr from-brand-600 to-teal-400 flex items-center justify-center text-slate-950 font-bold text-xl shadow-md shadow-brand-500/20">
+                PG
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-tight text-white flex items-center">
+                    PolicyGuard
+                    <span class="ml-2.5 px-2 py-0.5 text-[10px] font-semibold bg-slate-800 text-slate-400 border border-slate-700/60 rounded">SG HACKATHON</span>
+                </h1>
+                <p class="text-xs text-slate-400">Policy Conflict & Staleness Detector</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center space-x-4">
+            <!-- Organization Placeholder -->
+            <div class="hidden md:flex flex-col items-end border-r border-slate-800 pr-4">
+                <span class="text-xs font-semibold text-slate-300">Societe Generale</span>
+                <span class="text-[10px] text-brand-500 font-mono">TRACK: POLICY GOVERNANCE</span>
+            </div>
+            
+            <!-- Export PDF Button -->
+            <button onclick="exportPDF()" class="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white px-4 py-2 rounded-lg border border-slate-700/80 transition text-sm font-medium">
+                <i data-lucide="download" class="w-4 h-4 text-brand-500"></i>
+                <span>Export Audit Report</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 flex overflow-hidden min-h-0 bg-slate-950">
+        
+        <!-- Sidebar Filters -->
+        <aside class="w-72 border-r border-slate-900 bg-slate-900/30 flex flex-col flex-shrink-0">
+            <!-- Document List / Upload Manager -->
+            <div class="p-5 border-b border-slate-900 flex-shrink-0">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Policy Documents</h3>
+                
+                <!-- Upload Dropzone Form -->
+                <div class="relative group">
+                    <input type="file" id="policyFileInput" onchange="uploadPolicyFile()" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                    <div class="border border-dashed border-slate-800 group-hover:border-brand-500/50 bg-slate-950/40 rounded-lg p-3 text-center transition">
+                        <i data-lucide="upload-cloud" class="w-5 h-5 text-slate-500 group-hover:text-brand-500 mx-auto mb-1"></i>
+                        <span class="text-xs font-medium text-slate-400 group-hover:text-slate-300 block">Upload Policy (.md / .txt)</span>
+                    </div>
+                </div>
+                
+                <!-- Document List -->
+                <div id="policiesList" class="mt-4 space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                    <!-- Skeleton Loader -->
+                    <div class="animate-pulse space-y-2">
+                        <div class="h-8 bg-slate-900 rounded"></div>
+                        <div class="h-8 bg-slate-900 rounded"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Filters Section -->
+            <div class="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar">
+                <!-- Search bar -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Search Text</label>
+                    <div class="relative">
+                        <input type="text" id="searchInput" oninput="applyFilters()" placeholder="Search obligations..." class="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-brand-500 transition">
+                        <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-slate-500"></i>
+                    </div>
+                </div>
+
+                <!-- Filter by Topic -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Filter by Topic</label>
+                    <select id="topicFilter" onchange="applyFilters()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-brand-500 transition">
+                        <option value="">All Topics</option>
+                        <option value="password">Password Security</option>
+                        <option value="encryption">Encryption</option>
+                        <option value="access_control">Access Control</option>
+                        <option value="data_retention">Data Retention</option>
+                        <option value="logging">Logging & Auditing</option>
+                        <option value="network">Network Security</option>
+                        <option value="mfa">MFA Requirements</option>
+                        <option value="backup">Database Backup</option>
+                        <option value="acceptable_use">Acceptable Use</option>
+                        <option value="data_classification">Data Classification</option>
+                    </select>
+                </div>
+
+                <!-- Filter by Finding Type -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Finding Severity / Type</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center space-x-2 text-xs text-slate-300 cursor-pointer">
+                            <input type="checkbox" id="typeConflict" checked onchange="applyFilters()" class="rounded border-slate-800 text-brand-500 bg-slate-950 focus:ring-0 focus:ring-offset-0">
+                            <span class="flex items-center"><span class="h-2 w-2 rounded-full bg-red-500 mr-2"></span>Conflict</span>
+                        </label>
+                        <label class="flex items-center space-x-2 text-xs text-slate-300 cursor-pointer">
+                            <input type="checkbox" id="typeRedundant" checked onchange="applyFilters()" class="rounded border-slate-800 text-brand-500 bg-slate-950 focus:ring-0 focus:ring-offset-0">
+                            <span class="flex items-center"><span class="h-2 w-2 rounded-full bg-orange-500 mr-2"></span>Redundant</span>
+                        </label>
+                        <label class="flex items-center space-x-2 text-xs text-slate-300 cursor-pointer">
+                            <input type="checkbox" id="typeStale" checked onchange="applyFilters()" class="rounded border-slate-800 text-brand-500 bg-slate-950 focus:ring-0 focus:ring-offset-0">
+                            <span class="flex items-center"><span class="h-2 w-2 rounded-full bg-yellow-500 mr-2"></span>Stale / Deprecated</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Filter by Obligation Strength -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Obligation Strength</label>
+                    <div class="flex space-x-2">
+                        <button id="strengthAll" onclick="filterStrength('all')" class="flex-1 bg-brand-500/10 border border-brand-500/30 text-brand-500 py-1.5 rounded text-[10px] font-semibold transition">ALL</button>
+                        <button id="strengthMandatory" onclick="filterStrength('mandatory')" class="flex-1 bg-slate-950 border border-slate-800 text-slate-400 hover:text-slate-300 py-1.5 rounded text-[10px] font-semibold transition">MANDATORY</button>
+                        <button id="strengthAdvisory" onclick="filterStrength('advisory')" class="flex-1 bg-slate-950 border border-slate-800 text-slate-400 hover:text-slate-300 py-1.5 rounded text-[10px] font-semibold transition">ADVISORY</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Eval Dashboard Trigger -->
+            <div class="p-5 border-t border-slate-900 flex-shrink-0">
+                <button onclick="toggleTab('eval')" class="w-full bg-slate-950 hover:bg-slate-900 border border-slate-800/80 rounded-lg p-3 text-left transition flex items-center justify-between">
+                    <div>
+                        <span class="text-xs font-semibold text-slate-300 block">Model Confidence</span>
+                        <span class="text-[10px] text-slate-500 font-mono">Live Validation Metrics</span>
+                    </div>
+                    <i data-lucide="gauge" class="w-4 h-4 text-brand-500"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Central Work Area -->
+        <section class="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+            
+            <!-- Stats Dashboard Row -->
+            <div class="p-6 border-b border-slate-900/60 bg-slate-900/10 grid grid-cols-12 gap-5 flex-shrink-0 items-center">
+                
+                <!-- Health Circular Progress Bar -->
+                <div class="col-span-12 md:col-span-3 flex items-center justify-center md:justify-start space-x-4">
+                    <div class="relative h-20 w-20 flex items-center justify-center flex-shrink-0">
+                        <svg class="h-20 w-20 transform -rotate-90">
+                            <!-- Track circle -->
+                            <circle cx="40" cy="40" r="34" class="stroke-slate-800" stroke-width="6" fill="transparent"/>
+                            <!-- Progress circle -->
+                            <circle cx="40" cy="40" r="34" id="healthProgressCircle" class="gauge-progress stroke-brand-500" stroke-width="6" fill="transparent"
+                                    stroke-dasharray="213.6" stroke-dashoffset="213.6" stroke-linecap="round"/>
+                        </svg>
+                        <span id="healthValueText" class="absolute font-mono text-xl font-bold text-white">--</span>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Policy Health Score</h4>
+                        <p id="healthStatusText" class="text-xs font-semibold text-brand-500 mt-0.5">Calculating...</p>
+                    </div>
+                </div>
+
+                <!-- KPI Metrics Grid -->
+                <div class="col-span-12 md:col-span-9 grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Conflicts Card -->
+                    <div class="bg-slate-900/40 border border-slate-900 rounded-xl p-4 flex items-center justify-between glow-red">
+                        <div>
+                            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Conflicts</span>
+                            <span id="countConflicts" class="text-2xl font-mono font-bold text-red-500 block mt-1">--</span>
+                        </div>
+                        <div class="h-9 w-9 rounded-lg bg-red-500/10 flex items-center justify-center text-red-500">
+                            <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+                    <!-- Redundancies Card -->
+                    <div class="bg-slate-900/40 border border-slate-900 rounded-xl p-4 flex items-center justify-between glow-amber">
+                        <div>
+                            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Redundancies</span>
+                            <span id="countRedundancies" class="text-2xl font-mono font-bold text-orange-500 block mt-1">--</span>
+                        </div>
+                        <div class="h-9 w-9 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500">
+                            <i data-lucide="copy" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+                    <!-- Stale Policies Card -->
+                    <div class="bg-slate-900/40 border border-slate-900 rounded-xl p-4 flex items-center justify-between glow-teal">
+                        <div>
+                            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Stale / EOL Refs</span>
+                            <span id="countStale" class="text-2xl font-mono font-bold text-yellow-500 block mt-1">--</span>
+                        </div>
+                        <div class="h-9 w-9 rounded-lg bg-yellow-500/10 flex items-center justify-center text-yellow-500">
+                            <i data-lucide="calendar" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+                    <!-- Total Obligations Card -->
+                    <div class="bg-slate-900/40 border border-slate-900 rounded-xl p-4 flex items-center justify-between">
+                        <div>
+                            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Obligations</span>
+                            <span id="countTotal" class="text-2xl font-mono font-bold text-slate-300 block mt-1">--</span>
+                        </div>
+                        <div class="h-9 w-9 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400">
+                            <i data-lucide="book-open" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Headers -->
+            <div class="px-6 border-b border-slate-900/60 flex items-center justify-between flex-shrink-0 bg-slate-900/10">
+                <div class="flex space-x-6">
+                    <button id="tabButtonTable" onclick="toggleTab('table')" class="py-3 text-xs font-semibold text-brand-500 border-b-2 border-brand-500 transition">
+                        Findings Matrix
+                    </button>
+                    <button id="tabButtonGraph" onclick="toggleTab('graph')" class="py-3 text-xs font-semibold text-slate-400 hover:text-slate-200 border-b-2 border-transparent transition">
+                        Interactive Relationship Graph
+                    </button>
+                    <button id="tabButtonEval" onclick="toggleTab('eval')" class="py-3 text-xs font-semibold text-slate-400 hover:text-slate-200 border-b-2 border-transparent transition">
+                        Model Confidence (Validation)
+                    </button>
+                </div>
+                <div id="loadingIndicator" class="hidden flex items-center space-x-2 text-[10px] text-slate-500 font-mono">
+                    <div class="animate-spin h-3.5 w-3.5 border-2 border-brand-500 border-t-transparent rounded-full"></div>
+                    <span>Processing Pipeline...</span>
+                </div>
+            </div>
+
+            <!-- View Layout Stack -->
+            <div class="flex-1 overflow-hidden relative">
+                
+                <!-- Tab: Table view -->
+                <div id="viewTable" class="absolute inset-0 flex flex-col p-6 overflow-y-auto custom-scrollbar">
+                    
+                    <!-- Table component -->
+                    <div class="border border-slate-900 rounded-xl overflow-hidden bg-slate-950 flex-1 flex flex-col min-h-[300px]">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-900/50 border-b border-slate-900 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                        <th class="px-4 py-3">Type</th>
+                                        <th class="px-4 py-3">Topic</th>
+                                        <th class="px-4 py-3">Obligation Excerpt A</th>
+                                        <th class="px-4 py-3">Obligation Excerpt B / Finding</th>
+                                        <th class="px-4 py-3 text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="findingsTableBody" class="divide-y divide-slate-900/60 text-xs">
+                                    <!-- Skeleton loading block -->
+                                    <tr class="animate-pulse">
+                                        <td class="px-4 py-4"><div class="h-4 bg-slate-900 rounded w-16"></div></td>
+                                        <td class="px-4 py-4"><div class="h-4 bg-slate-900 rounded w-20"></div></td>
+                                        <td class="px-4 py-4"><div class="h-4 bg-slate-900 rounded w-48"></div></td>
+                                        <td class="px-4 py-4"><div class="h-4 bg-slate-900 rounded w-48"></div></td>
+                                        <td class="px-4 py-4"><div class="h-4 bg-slate-900 rounded w-10 ml-auto"></div></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Graph view -->
+                <div id="viewGraph" class="absolute inset-0 hidden flex-col">
+                    <div class="relative w-full h-full flex-1">
+                        <!-- Vis.js Container -->
+                        <div id="graphContainer" class="w-full h-full bg-slate-950"></div>
+                        
+                        <!-- Legend overlay -->
+                        <div class="absolute bottom-6 left-6 p-4 bg-slate-900/90 border border-slate-800 rounded-xl backdrop-blur-md text-[10px] space-y-2.5 z-10">
+                            <h5 class="font-bold text-slate-300 uppercase tracking-wider mb-1.5">Graph Legend</h5>
+                            <div class="flex items-center space-x-2"><span class="h-2 w-2 rounded-full bg-indigo-500"></span><span class="text-slate-400">Password Topic</span></div>
+                            <div class="flex items-center space-x-2"><span class="h-2 w-2 rounded-full bg-cyan-500"></span><span class="text-slate-400">Encryption Topic</span></div>
+                            <div class="flex items-center space-x-2"><span class="h-2 w-2 rounded-full bg-emerald-500"></span><span class="text-slate-400">Access Control Topic</span></div>
+                            <div class="flex items-center space-x-2"><span class="h-2 w-2 rounded-full bg-blue-500"></span><span class="text-slate-400">Data Retention Topic</span></div>
+                            <div class="flex items-center space-x-2"><span class="h-2 w-2 rounded-full bg-yellow-500"></span><span class="text-slate-400">MFA Topic</span></div>
+                            <div class="border-t border-slate-800 my-2 pt-2"></div>
+                            <div class="flex items-center space-x-2"><span class="h-0.5 w-4 bg-red-500"></span><span class="text-slate-400">Conflict</span></div>
+                            <div class="flex items-center space-x-2"><span class="h-0.5 w-4 bg-orange-500"></span><span class="text-slate-400">Redundancy</span></div>
+                            <div class="flex items-center space-x-2"><span class="h-0.5 w-4 bg-yellow-500"></span><span class="text-slate-400">Potential Conflict</span></div>
+                            <div class="flex items-center space-x-2"><span class="h-0.5 w-4 bg-emerald-500"></span><span class="text-slate-400">Complementary</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Self-Eval view -->
+                <div id="viewEval" class="absolute inset-0 hidden p-6 overflow-y-auto custom-scrollbar space-y-6">
+                    <div class="max-w-4xl mx-auto space-y-6">
+                        <div class="bg-slate-900/30 border border-slate-900 rounded-2xl p-6">
+                            <h3 class="text-lg font-bold text-white mb-2">Self-Evaluation System</h3>
+                            <p class="text-xs text-slate-400 leading-relaxed">
+                                The self-evaluation engine parses and runs our rules pipelines against a validation dataset containing 5 security policies and a ground truth relationship log. The metrics below indicate the precision, recall, and false positive parameters evaluated dynamically by the system.
+                            </p>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <!-- Metrics Cards -->
+                            <div class="space-y-4">
+                                <div class="bg-slate-900/40 border border-slate-900 rounded-xl p-5">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Obligation Extraction</span>
+                                        <span id="evalExtractionVal" class="text-xl font-mono font-bold text-emerald-400">--%</span>
+                                    </div>
+                                    <div class="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                                        <div id="evalExtractionProgress" class="bg-emerald-400 h-full w-0 transition-all duration-1000"></div>
+                                    </div>
+                                    <span class="text-[10px] text-slate-500 mt-1.5 block">Target Accuracy: &gt;80% (F1 Score)</span>
+                                </div>
+                                
+                                <div class="bg-slate-900/40 border border-slate-900 rounded-xl p-5">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Conflict Detection</span>
+                                        <span id="evalConflictVal" class="text-xl font-mono font-bold text-emerald-400">--%</span>
+                                    </div>
+                                    <div class="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                                        <div id="evalConflictProgress" class="bg-emerald-400 h-full w-0 transition-all duration-1000"></div>
+                                    </div>
+                                    <span class="text-[10px] text-slate-500 mt-1.5 block">Target Recall Rate: &gt;75%</span>
+                                </div>
+                                
+                                <div class="bg-slate-900/40 border border-slate-900 rounded-xl p-5">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Redundancy Detection</span>
+                                        <span id="evalRedundancyVal" class="text-xl font-mono font-bold text-emerald-400">--%</span>
+                                    </div>
+                                    <div class="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                                        <div id="evalRedundancyProgress" class="bg-emerald-400 h-full w-0 transition-all duration-1000"></div>
+                                    </div>
+                                    <span class="text-[10px] text-slate-500 mt-1.5 block">Target Recall Rate: &gt;70%</span>
+                                </div>
+                                
+                                <div class="bg-slate-900/40 border border-slate-900 rounded-xl p-5">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Staleness Detection</span>
+                                        <span id="evalStalenessVal" class="text-xl font-mono font-bold text-emerald-400">--%</span>
+                                    </div>
+                                    <div class="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                                        <div id="evalStalenessProgress" class="bg-emerald-400 h-full w-0 transition-all duration-1000"></div>
+                                    </div>
+                                    <span class="text-[10px] text-slate-500 mt-1.5 block">Target Recall Rate: &gt;90%</span>
+                                </div>
+
+                                <div class="bg-slate-900/40 border border-slate-900 rounded-xl p-5">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">False Positive Rate</span>
+                                        <span id="evalFPVal" class="text-xl font-mono font-bold text-emerald-400">--%</span>
+                                    </div>
+                                    <div class="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                                        <div id="evalFPProgress" class="bg-emerald-400 h-full w-0 transition-all duration-1000"></div>
+                                    </div>
+                                    <span class="text-[10px] text-slate-500 mt-1.5 block">Target Alert Error Rate: &lt;20%</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Detailed Logs Panel -->
+                            <div class="bg-slate-900/40 border border-slate-900 rounded-xl p-5 flex flex-col h-[400px]">
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Ground Truth Diagnostic Output</span>
+                                <pre id="evalDiagnosticsLog" class="flex-1 bg-slate-950 border border-slate-900/60 rounded-lg p-4 font-mono text-[10px] text-slate-400 overflow-auto custom-scrollbar">Loading diagnostics output...</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Side detail Drawer Panel (Slide Out side-by-side view) -->
+        <aside id="detailDrawer" class="w-96 border-l border-slate-900 bg-slate-900/80 backdrop-blur-md flex flex-col flex-shrink-0 translate-x-full transition-transform duration-300 absolute inset-y-0 right-0 z-20 shadow-2xl">
+            <!-- Header -->
+            <div class="p-5 border-b border-slate-800/80 flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm font-bold text-white flex items-center">
+                        <span id="drawerTitleBadge" class="h-2 w-2 rounded-full mr-2"></span>
+                        <span id="drawerTitleText">Finding Detail</span>
+                    </h3>
+                    <p class="text-[10px] text-slate-500 font-mono mt-0.5" id="drawerHeadingId">REL-ID: --</p>
+                </div>
+                <button onclick="closeDrawer()" class="h-8 w-8 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            
+            <!-- Body Content -->
+            <div class="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar text-xs">
+                
+                <!-- Description box -->
+                <div class="bg-slate-950/60 border border-slate-800/60 rounded-xl p-4">
+                    <h4 class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Automated Finding Explanation</h4>
+                    <p id="drawerExplanation" class="text-slate-300 leading-relaxed">No finding selected.</p>
+                </div>
+                
+                <!-- Side-by-Side Clause Comparer -->
+                <div id="drawerComparisonSection" class="space-y-4">
+                    
+                    <!-- Clause A -->
+                    <div class="bg-slate-950/40 border border-slate-900/80 rounded-xl p-4 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[9px] font-bold text-brand-500 font-mono" id="clauseADoc">Password_Policy_2021.md</span>
+                            <span class="text-[9px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded" id="clauseASection">Sec: 1.1</span>
+                        </div>
+                        <p id="clauseAText" class="text-slate-400 italic">"..."</p>
+                    </div>
+                    
+                    <!-- Connector arrow -->
+                    <div class="flex justify-center text-slate-600">
+                        <i data-lucide="arrow-down-up" class="w-5 h-5"></i>
+                    </div>
+                    
+                    <!-- Clause B -->
+                    <div class="bg-slate-950/40 border border-slate-900/80 rounded-xl p-4 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[9px] font-brand-500 font-mono text-cyan-500" id="clauseBDoc">Password_Policy_2026.md</span>
+                            <span class="text-[9px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded" id="clauseBSection">Sec: 1.1</span>
+                        </div>
+                        <p id="clauseBText" class="text-slate-400 italic">"..."</p>
+                    </div>
+                </div>
+                
+                <!-- Single Obligation Display (for staleness/node focus) -->
+                <div id="drawerSingleObligationSection" class="hidden space-y-4">
+                    <div class="bg-slate-950/40 border border-slate-900/80 rounded-xl p-4 space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span id="singleDocName" class="text-[10px] font-mono text-brand-500">Document_Name.md</span>
+                            <span id="singleDocSection" class="text-[9px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded">Sec: 1.0</span>
+                        </div>
+                        <p id="singleDocText" class="text-slate-300 font-medium">"..."</p>
+                        
+                        <div class="border-t border-slate-900/60 pt-3 grid grid-cols-2 gap-3 text-[10px] font-mono">
+                            <div>
+                                <span class="text-slate-500 block">TOPIC</span>
+                                <span id="singleDocTopic" class="text-slate-300">--</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 block">STRENGTH</span>
+                                <span id="singleDocStrength" class="text-slate-300">--</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 block">SCOPE</span>
+                                <span id="singleDocScope" class="text-slate-300">--</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 block">LAST REVIEWED</span>
+                                <span id="singleDocLastReviewed" class="text-slate-300">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Client-side App Logic script -->
+    <script>
+        const API_BASE = "http://localhost:8000/api";
+        
+        let allObligations = [];
+        let allRelations = [];
+        let filteredRelations = [];
+        let policies = [];
+        let activeTab = 'table';
+        let currentStrengthFilter = 'all';
+        let graphNetwork = null;
+        let healthScore = 100;
+
+        // Initialize Lucide icons on DOM Load
+        window.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            fetchData();
+        });
+
+        async function fetchData() {
+            setLoading(true);
+            try {
+                // Fetch Policies list
+                const policiesRes = await fetch(`${API_BASE}/policies`);
+                policies = await policiesRes.json();
+                renderPoliciesList();
+
+                // Fetch Pipeline Analysis results
+                const analysisRes = await fetch(`${API_BASE}/analyze`);
+                const data = await analysisRes.json();
+                
+                allObligations = data.obligations;
+                allRelations = data.relations;
+                healthScore = data.health_score;
+
+                // Update Health gauge ring
+                updateHealthGauge(healthScore);
+
+                // Update KPI totals
+                document.getElementById('countConflicts').innerText = data.metrics.conflicts;
+                document.getElementById('countRedundancies').innerText = data.metrics.redundancies;
+                document.getElementById('countStale').innerText = data.metrics.stale_policies;
+                document.getElementById('countTotal').innerText = data.metrics.total_obligations;
+
+                // Apply filters to populate table
+                applyFilters();
+
+                // Build Graph
+                buildGraph(data.graph);
+
+                // Fetch Validation Eval statistics
+                fetchEvaluation();
+
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function renderPoliciesList() {
+            const container = document.getElementById('policiesList');
+            if (policies.length === 0) {
+                container.innerHTML = `<div class="text-[10px] text-slate-500 text-center py-2">No policies uploaded</div>`;
+                return;
+            }
+            container.innerHTML = policies.map(p => `
+                <div class="flex items-center justify-between p-2 bg-slate-900/60 border border-slate-800 rounded-lg text-[10px] font-medium group transition hover:border-slate-700">
+                    <div class="flex flex-col min-w-0 pr-2">
+                        <span class="text-slate-300 font-mono truncate max-w-[160px]">${p.filename}</span>
+                        <span class="text-[8px] text-slate-500">Reviewed: ${p.last_reviewed}</span>
+                    </div>
+                    <button onclick="deletePolicyFile('${p.filename}')" class="h-5 w-5 hover:bg-red-500/10 text-slate-500 hover:text-red-400 rounded flex items-center justify-center transition">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        async function uploadPolicyFile() {
+            const input = document.getElementById('policyFileInput');
+            if (input.files.length === 0) return;
+            
+            const file = input.files[0];
+            const formData = new FormData();
+            formData.append("file", file);
+            
+            setLoading(true);
+            try {
+                const res = await fetch(`${API_BASE}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (!res.ok) throw new Error("Upload failed.");
+                
+                input.value = ''; // Reset input
+                await fetchData(); // Reload
+            } catch (error) {
+                alert(`Error uploading file: ${error.message}`);
+                setLoading(false);
+            }
+        }
+
+        async function deletePolicyFile(filename) {
+            if (!confirm(`Are you sure you want to remove policy file: ${filename}?`)) return;
+            
+            setLoading(true);
+            try {
+                const res = await fetch(`${API_BASE}/policies/${filename}`, {
+                    method: 'DELETE'
+                });
+                if (!res.ok) throw new Error("Delete failed.");
+                await fetchData();
+            } catch (error) {
+                alert(`Error deleting file: ${error.message}`);
+                setLoading(false);
+            }
+        }
+
+        async function fetchEvaluation() {
+            try {
+                const evalRes = await fetch(`${API_BASE}/eval`);
+                const evalData = await evalRes.json();
+
+                // Populate progress cards
+                updateProgressBar('evalExtraction', evalData.obligation_extraction_accuracy);
+                updateProgressBar('evalConflict', evalData.conflict_detection_rate);
+                updateProgressBar('evalRedundancy', evalData.redundancy_detection_rate);
+                updateProgressBar('evalStaleness', evalData.staleness_detection_rate);
+                updateProgressBar('evalFP', evalData.false_positive_rate);
+
+                // Highlight FP color based on criteria (green if < 20%)
+                const fpVal = document.getElementById('evalFPVal');
+                if (evalData.false_positive_rate < 20) {
+                    fpVal.className = "text-xl font-mono font-bold text-emerald-400";
+                    document.getElementById('evalFPProgress').className = "bg-emerald-400 h-full transition-all duration-1000";
+                } else {
+                    fpVal.className = "text-xl font-mono font-bold text-red-400";
+                    document.getElementById('evalFPProgress').className = "bg-red-400 h-full transition-all duration-1000";
+                }
+
+                // Render diagnostics log
+                document.getElementById('evalDiagnosticsLog').innerText = JSON.stringify(evalData, null, 2);
+            } catch (error) {
+                console.error("Error loading evaluation:", error);
+            }
+        }
+
+        function updateProgressBar(id, value) {
+            document.getElementById(`${id}Val`).innerText = `${value}%`;
+            document.getElementById(`${id}Progress`).style.width = `${value}%`;
+        }
+
+        function updateHealthGauge(score) {
+            document.getElementById('healthValueText').innerText = score;
+            
+            // Adjust SVG progress circle stroke-dashoffset (perimeter is 2 * PI * 34 = 213.6)
+            const perimeter = 213.6;
+            const offset = perimeter - (score / 100) * perimeter;
+            document.getElementById('healthProgressCircle').style.strokeDashoffset = offset;
+            
+            const circle = document.getElementById('healthProgressCircle');
+            const statusText = document.getElementById('healthStatusText');
+            
+            if (score >= 80) {
+                circle.setAttribute('class', 'gauge-progress stroke-emerald-500');
+                statusText.innerText = "Compliance Healthy";
+                statusText.className = "text-xs font-semibold text-emerald-500 mt-0.5";
+            } else if (score >= 50) {
+                circle.setAttribute('class', 'gauge-progress stroke-amber-500');
+                statusText.innerText = "Review Recommended";
+                statusText.className = "text-xs font-semibold text-amber-500 mt-0.5";
+            } else {
+                circle.setAttribute('class', 'gauge-progress stroke-red-500');
+                statusText.innerText = "Critical Remediation Required";
+                statusText.className = "text-xs font-semibold text-red-500 mt-0.5";
+            }
+        }
+
+        function toggleTab(tab) {
+            activeTab = tab;
+            
+            // Toggle view visibility
+            document.getElementById('viewTable').style.display = (tab === 'table') ? 'flex' : 'none';
+            document.getElementById('viewGraph').style.display = (tab === 'graph') ? 'flex' : 'none';
+            document.getElementById('viewEval').style.display = (tab === 'eval') ? 'block' : 'none';
+            
+            // Toggle active classes on tab headers
+            const tabs = ['Table', 'Graph', 'Eval'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tabButton${t}`);
+                if (t.toLowerCase() === tab) {
+                    btn.className = "py-3 text-xs font-semibold text-brand-500 border-b-2 border-brand-500 transition";
+                } else {
+                    btn.className = "py-3 text-xs font-semibold text-slate-400 hover:text-slate-200 border-b-2 border-transparent transition";
+                }
+            });
+
+            // Adjust vis.js rendering on display
+            if (tab === 'graph' && graphNetwork) {
+                setTimeout(() => graphNetwork.fit(), 100);
+            }
+        }
+
+        function filterStrength(strength) {
+            currentStrengthFilter = strength;
+            
+            // Toggle selected styles
+            ['All', 'Mandatory', 'Advisory'].forEach(s => {
+                const btn = document.getElementById(`strength${s}`);
+                if (s.toLowerCase() === strength) {
+                    btn.className = "flex-1 bg-brand-500/10 border border-brand-500/30 text-brand-500 py-1.5 rounded text-[10px] font-semibold transition";
+                } else {
+                    btn.className = "flex-1 bg-slate-950 border border-slate-800 text-slate-400 hover:text-slate-300 py-1.5 rounded text-[10px] font-semibold transition";
+                }
+            });
+            
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+            const selectedTopic = document.getElementById('topicFilter').value;
+            
+            const checkConflict = document.getElementById('typeConflict').checked;
+            const checkRedundant = document.getElementById('typeRedundant').checked;
+            const checkStale = document.getElementById('typeStale').checked;
+
+            // 1. Process relations (conflicts & redundancies)
+            filteredRelations = allRelations.filter(r => {
+                // Topic filter
+                const srcOb = allObligations.find(o => o.id === r.source_id);
+                if (selectedTopic && srcOb && srcOb.topic !== selectedTopic) return false;
+                
+                // Strength filter
+                if (currentStrengthFilter !== 'all' && srcOb && srcOb.strength !== currentStrengthFilter) return false;
+                
+                // Search query
+                if (searchQuery && !r.source_text.toLowerCase().includes(searchQuery) && !r.target_text.toLowerCase().includes(searchQuery) && !r.explanation.toLowerCase().includes(searchQuery)) return false;
+                
+                // Type filters
+                if (r.type === 'CONFLICT' || r.type === 'POTENTIAL_CONFLICT') return checkConflict;
+                if (r.type === 'REDUNDANT') return checkRedundant;
+                if (r.type === 'COMPLEMENTARY') return true; // Always allow complementary if topic aligns
+                return false;
+            });
+
+            // 2. Process single stale obligation entries
+            let filteredStale = [];
+            if (checkStale) {
+                filteredStale = allObligations.filter(o => {
+                    if (!o.is_stale) return false;
+                    if (selectedTopic && o.topic !== selectedTopic) return false;
+                    if (currentStrengthFilter !== 'all' && o.strength !== currentStrengthFilter) return false;
+                    if (searchQuery && !o.raw_text.toLowerCase().includes(searchQuery)) return false;
+                    return true;
+                });
+            }
+
+            renderFindingsTable(filteredRelations, filteredStale);
+        }
+
+        function renderFindingsTable(relations, staleObligations) {
+            const tbody = document.getElementById('findingsTableBody');
+            tbody.innerHTML = '';
+            
+            if (relations.length === 0 && staleObligations.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="px-4 py-8 text-center text-slate-500 font-medium">
+                            No findings found matching active filter set.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            // Render Relations (Conflicts & Redundancies)
+            relations.forEach(r => {
+                let badgeClass = "bg-red-500/10 text-red-500 border border-red-500/20";
+                if (r.type === 'POTENTIAL_CONFLICT') badgeClass = "bg-yellow-500/10 text-yellow-500 border border-yellow-500/20";
+                if (r.type === 'REDUNDANT') badgeClass = "bg-orange-500/10 text-orange-500 border border-orange-500/20";
+                if (r.type === 'COMPLEMENTARY') badgeClass = "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20";
+
+                const row = document.createElement('tr');
+                row.className = "hover:bg-slate-900/30 transition cursor-pointer border-b border-slate-900/60";
+                row.onclick = () => openRelationDrawer(r);
+                row.innerHTML = `
+                    <td class="px-4 py-4.5 whitespace-nowrap">
+                        <span class="px-2 py-0.5 rounded-[4px] text-[10px] font-bold ${badgeClass}">
+                            ${r.type}
+                        </span>
+                    </td>
+                    <td class="px-4 py-4.5 whitespace-nowrap uppercase text-[10px] font-mono text-slate-400">
+                        ${allObligations.find(o => o.id === r.source_id)?.topic || 'General'}
+                    </td>
+                    <td class="px-4 py-4.5 max-w-xs truncate font-mono text-slate-300">
+                        <span class="text-brand-500 mr-1.5 font-bold">[${r.source_doc.replace('.md', '')}:${r.source_section}]</span>${r.source_text}
+                    </td>
+                    <td class="px-4 py-4.5 max-w-xs truncate font-mono text-slate-300">
+                        <span class="text-cyan-500 mr-1.5 font-bold">[${r.target_doc.replace('.md', '')}:${r.target_section}]</span>${r.target_text}
+                    </td>
+                    <td class="px-4 py-4.5 text-right whitespace-nowrap">
+                        <button class="text-brand-500 hover:text-brand-400 font-semibold text-[11px] flex items-center justify-end space-x-1 ml-auto">
+                            <span>Compare</span>
+                            <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            // Render Stale Obligations
+            staleObligations.forEach(o => {
+                const row = document.createElement('tr');
+                row.className = "hover:bg-slate-900/30 transition cursor-pointer border-b border-slate-900/60";
+                row.onclick = () => openStaleDrawer(o);
+                row.innerHTML = `
+                    <td class="px-4 py-4.5 whitespace-nowrap">
+                        <span class="px-2 py-0.5 rounded-[4px] text-[10px] font-bold bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">
+                            STALE
+                        </span>
+                    </td>
+                    <td class="px-4 py-4.5 whitespace-nowrap uppercase text-[10px] font-mono text-slate-400">
+                        ${o.topic}
+                    </td>
+                    <td class="px-4 py-4.5 font-mono text-slate-300" colspan="2">
+                        <span class="text-yellow-500 mr-1.5 font-bold">[${o.source_doc.replace('.md', '')}:${o.section}]</span>${o.raw_text}
+                        <div class="text-[10px] text-slate-500 mt-1 font-sans flex items-center space-x-1.5">
+                            <i data-lucide="info" class="w-3 h-3 text-yellow-500/80"></i>
+                            <span>${o.staleness_reasons.join(' | ')}</span>
+                        </div>
+                    </td>
+                    <td class="px-4 py-4.5 text-right whitespace-nowrap">
+                        <button class="text-brand-500 hover:text-brand-400 font-semibold text-[11px] flex items-center justify-end space-x-1 ml-auto">
+                            <span>Inspect</span>
+                            <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            lucide.createIcons();
+        }
+
+        function openRelationDrawer(relation) {
+            document.getElementById('drawerComparisonSection').classList.remove('hidden');
+            document.getElementById('drawerSingleObligationSection').classList.add('hidden');
+            
+            document.getElementById('drawerHeadingId').innerText = `RELATION-ID: ${relation.id.toUpperCase()}`;
+            document.getElementById('drawerTitleText').innerText = relation.type;
+            
+            // Set indicator badge color
+            const badge = document.getElementById('drawerTitleBadge');
+            badge.className = "h-2.5 w-2.5 rounded-full mr-2 " + (
+                relation.type === 'CONFLICT' ? 'bg-red-500 glow-red' :
+                relation.type === 'POTENTIAL_CONFLICT' ? 'bg-yellow-500 glow-amber' :
+                relation.type === 'REDUNDANT' ? 'bg-orange-500 glow-amber' : 'bg-emerald-500'
+            );
+
+            document.getElementById('drawerExplanation').innerText = relation.explanation;
+            
+            document.getElementById('clauseADoc').innerText = relation.source_doc;
+            document.getElementById('clauseASection').innerText = `Sec: ${relation.source_section}`;
+            document.getElementById('clauseAText').innerText = `"${relation.source_text}"`;
+            
+            document.getElementById('clauseBDoc').innerText = relation.target_doc;
+            document.getElementById('clauseBSection').innerText = `Sec: ${relation.target_section}`;
+            document.getElementById('clauseBText').innerText = `"${relation.target_text}"`;
+            
+            document.getElementById('detailDrawer').classList.remove('translate-x-full');
+            lucide.createIcons();
+        }
+
+        function openStaleDrawer(obligation) {
+            document.getElementById('drawerComparisonSection').classList.add('hidden');
+            document.getElementById('drawerSingleObligationSection').classList.remove('hidden');
+            
+            document.getElementById('drawerHeadingId').innerText = `OBLIGATION-ID: ${obligation.id.toUpperCase()}`;
+            document.getElementById('drawerTitleText').innerText = "STALENESS FINDING";
+            
+            const badge = document.getElementById('drawerTitleBadge');
+            badge.className = "h-2.5 w-2.5 rounded-full mr-2 bg-yellow-500 glow-amber";
+
+            // Aggregate reasons
+            document.getElementById('drawerExplanation').innerHTML = `
+                <div class="space-y-1.5">
+                    <strong>Findings:</strong>
+                    ${obligation.staleness_reasons.map(r => `<div>&bull; ${r}</div>`).join('')}
+                </div>
+            `;
+            
+            document.getElementById('singleDocName').innerText = obligation.source_doc;
+            document.getElementById('singleDocSection').innerText = `Sec: ${obligation.section}`;
+            document.getElementById('singleDocText').innerText = `"${obligation.raw_text}"`;
+            
+            document.getElementById('singleDocTopic').innerText = obligation.topic.toUpperCase().replace('_', ' ');
+            document.getElementById('singleDocStrength').innerText = obligation.strength.toUpperCase();
+            document.getElementById('singleDocScope').innerText = obligation.scope.toUpperCase().replace('_', ' ');
+            document.getElementById('singleDocLastReviewed').innerText = obligation.last_reviewed;
+            
+            document.getElementById('detailDrawer').classList.remove('translate-x-full');
+            lucide.createIcons();
+        }
+
+        function closeDrawer() {
+            document.getElementById('detailDrawer').classList.add('translate-x-full');
+        }
+
+        function buildGraph(graphData) {
+            const container = document.getElementById('graphContainer');
+            
+            // Map graph data to vis-network structure
+            const nodes = new vis.DataSet(graphData.nodes.map(n => ({
+                id: n.id,
+                label: n.label,
+                title: n.title,
+                color: {
+                    background: n.color,
+                    border: n.is_stale ? '#F59E0B' : '#0F172A',
+                    highlight: { background: n.color, border: '#14b8a6' }
+                },
+                shape: 'dot',
+                size: n.is_stale ? 18 : 14,
+                borderWidth: n.is_stale ? 3 : 1.5,
+                font: { color: '#E2E8F0', size: 10, face: 'JetBrains Mono' }
+            })));
+            
+            const edges = new vis.DataSet(graphData.edges.map(e => ({
+                from: e.from,
+                to: e.to,
+                label: e.type,
+                color: { color: e.color, highlight: '#14b8a6' },
+                width: e.weight * 2.5,
+                title: e.title,
+                font: { color: '#94A3B8', size: 8, align: 'middle', face: 'Inter' },
+                arrows: { to: { enabled: false } }
+            })));
+            
+            const visData = { nodes, edges };
+            
+            const options = {
+                nodes: {
+                    scaling: { min: 10, max: 30 }
+                },
+                edges: {
+                    smooth: { type: 'continuous' }
+                },
+                physics: {
+                    barnesHut: { gravitationalConstant: -3000, centralGravity: 0.3, springLength: 120 },
+                    minVelocity: 0.75
+                },
+                interaction: { hover: true, tooltipDelay: 100 }
+            };
+            
+            graphNetwork = new vis.Network(container, visData, options);
+
+            // Add node select listener
+            graphNetwork.on("selectNode", function (params) {
+                const nodeId = params.nodes[0];
+                const obligation = allObligations.find(o => o.id === nodeId);
+                if (obligation) {
+                    if (obligation.is_stale) {
+                        openStaleDrawer(obligation);
+                    } else {
+                        // Find any relation referencing this node, and open that instead
+                        const rel = allRelations.find(r => r.source_id === nodeId || r.target_id === nodeId);
+                        if (rel) {
+                            openRelationDrawer(rel);
+                        } else {
+                            // If no relation exists, render as a single staleness drawer focus
+                            openStaleDrawer(obligation);
+                        }
+                    }
+                }
+            });
+        }
+
+        async function exportPDF() {
+            setLoading(true);
+            try {
+                window.open(`${API_BASE}/export-pdf`, '_blank');
+            } catch (error) {
+                console.error("PDF export failed:", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function setLoading(state) {
+            const indicator = document.getElementById('loadingIndicator');
+            if (state) {
+                indicator.classList.remove('hidden');
+            } else {
+                indicator.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

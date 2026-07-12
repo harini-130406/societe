@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Data files (large datasets)
+sample_data/policies/*.md
+sample_data/*.json
+!sample_data/policy_metadata.json
+!sample_data/obligation_extracts_labels.json
+!sample_data/findings_labels.json
+
+# Generated files
+backend/analysis.json
+sample_data/PolicyGuard_Audit_Report.pdf
+sample_data/evaluation_results.json
+
+# Logs
+*.log
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Documentation drafts
+docs/drafts/

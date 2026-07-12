@@ -1,0 +1,1751 @@
+
+
+
+
+
+Enterprise Challenge: Hybrid identity environments create identity sprawl—stale users, excessive privileges, orphaned service accounts. Modern breaches exploit identity weaknesses 80% more than malware.
+
+The Business Problem
+Scenario: A global enterprise manages identities across 15+ systems:
+On-premise Active Directory (legacy apps)
+Azure AD (Microsoft 365, cloud apps)
+AWS IAM, GCP, Okta, Salesforce, ServiceNow
+Custom APIs and third-party integrations
+The Pain Points:
+Manual Reviews: Security team manually reviews 500+ access requests monthly
+⏱ Slow Time-to-Discovery: Privilege abuse goes undetected for weeks
+Inconsistent Policies: Different identity rules across systems
+Stale Accounts: 15% of accounts are inactive but still privileged
+Alert Fatigue: Too many false positives to act on
+Real Impact:
+Risk: Compromised admin account could access financial data, HR systems, customer databases
+Compliance: NIST AC-2 (Account Management) violations; GDPR Article 32 (Security Measures)
+Operational Cost: 20 hours/week spent investigating access issues
+
+Challenge Overview
+Build an automated system to:
+Detect risky privilege patterns across hybrid identity platforms
+Classify accounts by risk level (stale, over-privileged, orphaned)
+Prioritize investigation with actionable insights
+Recommend least-privilege remediation actions
+
+Data Reality & Edge Cases (Making it Complex)
+Your LLM-built solution must handle real-world messiness:
+Data Quality Issues:
+Missing/incomplete data (95% of records have last_login, but 5% are null)
+Inconsistent timestamps (timezones vary, some in UTC, some in local time)
+Privilege datasets from different systems (no unified schema)
+Stale data (some user records updated monthly, others yearly)
+Service accounts with no activity baseline ("Should they be active?")
+Context Complexity:
+Role-based exceptions (admin needs broad access for their job, not a risk)
+Temporary privilege escalations (on-call engineer with elevated access 1 week/month)
+Contractors vs employees (different activity patterns expected)
+Job changes (new hire might have unusual access for first 30 days)
+Seasonal patterns (Finance team more active month-end/quarter-end)
+Ambiguous Scenarios:
+User A: Admin account with 60 days inactivity (fire immediately or check if on sabbatical?)
+User B: Service account with unusual access pattern (legitimate automation or compromised?)
+User C: Accessed 50 systems yesterday (role change or privilege escalation?)
+User D: Downloaded 100k records at 2 AM (suspicious or legitimate batch job?)
+The Challenge:
+Your LLM/solution must:**
+Disambiguate between risky and legitimate patterns
+Reduce false positives (or security team stops trusting it)
+Explain reasoning (why is this account risky? technical team needs to understand)
+Handle context (not just "flag all unusual" but "flag suspicious + explain")
+
+Approach Options
+Option A: AI/ML-Powered Risk Scoring (Advanced)
+Best for: Teams with ML experience, data science background
+Technical Approach:
+Ingest identity/audit logs from multiple sources (API integrations)
+Train behavior model: "What does normal activity look like for this role?"
+Use anomaly detection (Isolation Forest, Autoencoders) to flag deviations
+LLM-assisted: Generate human-readable risk narratives
+Output: Risk dashboard with confidence scores and recommended actions
+Skills Required: Python, ML (scikit-learn, TensorFlow), SQL, LLM APIs
+Complexity:  (4/5)
+Effort: 30-40 hours
+
+Option B: Rule-Based & Graph Analysis (Intermediate)
+Best for: Teams with backend/data engineering skills
+Technical Approach:
+Build privilege graph: Users → Roles → Systems → Resources
+Define rule engine: "Privilege exceeds role requirements"
+Correlate with activity logs: "No activity in 90 days = stale"
+Use graph analysis (NetworkX) to find isolated privilege clusters
+Output: Risk report with visual privilege maps
+Skills Required: Python, Graph databases/NetworkX, SQL, basic analytics
+Complexity:  (3/5)
+Effort: 20-30 hours
+
+Option C: Process Automation & Alerting (Beginner-Intermediate)
+Best for: Teams with full-stack/DevOps experience
+Technical Approach:
+Connect identity system APIs (Okta, Azure AD, AWS IAM)
+Extract privilege & activity data nightly
+Apply heuristic rules (e.g., "Flag unused admin accounts")
+Build notification system (alerts to Slack/email)
+Create simple dashboard (Google Sheets API or web interface)
+Output: Automated alerts + weekly summary report
+Skills Required: Python, REST APIs, basic web (Flask/FastAPI), automation
+Complexity:  (2/5)
+Effort: 15-25 hours
+
+Example Walkthrough: From Data to Insight
+Input: Raw Data Row
+
+Expected Output by Your System:
+
+Why This Matters:
+Score alone (92/100) isn't enough → context and explanation are critical
+Exception recognition (CTO role) → Shows your system understands nuance
+Recommendations are actionable → Not just "flag it", but "here's what to do"
+Confidence score → Shows your system's certainty level
+
+Sample Data Provided
+Files in `sample_data/`:
+
+Anomaly distribution in labels:
+User anomalies: ~16% (stale admins, over-privileged accounts)
+Event anomalies: ~41% (after-hours, bulk export, cross-department)
+Self-Evaluation (run this to check your precision/recall):
+
+Data span note: Events cover a full year — include month-end finance spikes, quarterly patterns, seasonal access shifts. Baselines built only on short windows will produce more false positives.
+
+Bonus Features (Challenge Yourself!)
+ Level 1: Implementation Bonus (5 pts each)
+Real-time alert dashboard (web UI, updates live)
+Privilege graph visualization (NetworkX → interactive)
+Automated remediation playbook (step-by-step fix)
+Multi-system correlation (link related risks across systems)
+ Level 2: Advanced Intelligence (10 pts each)
+Behavioral clustering (group similar risky patterns)
+Breach impact simulation ("if this account compromised, what's at risk?")
+False positive feedback loop (system learns to adjust based on corrections)
+Integration with real Okta/Azure AD APIs
+ Level 3: Enterprise Features (15 pts each)
+Organizational anomaly detection (unusual access patterns at dept level)
+Separation of duties violations (role conflicts detected)
+Compliance gap analysis (per user, per system)
+DLP integration (prevent exfiltration based on detected risk)
+
+
+
+Enterprise Challenge: Security controls change constantly. 40% of breaches result from misconfigured controls, not missing ones.
+
+The Business Problem
+Scenario: Large enterprise maintains 200+ security controls across:
+Firewalls (Palo Alto Networks, Cisco ASA)
+Endpoint Detection (CrowdStrike, Microsoft Defender)
+Cloud Security (AWS, Azure, GCP policy baselines)
+Logging & Monitoring (Splunk, ELK stacks)
+Data Protection (encryption keys, DLP policies)
+The Reality:
+Controls change daily (hotfixes, deployments, emergency changes)
+No single source of truth for configurations
+Changes often not documented ("Why was this disabled?")
+Critical controls drift silently from baseline
+Manual audits required quarterly (72 hours per cycle)
+Real Incidents:
+Case 1: Logging disabled during maintenance, never re-enabled → Breach went undetected for 6 months
+Case 2: Firewall rule added to "temporarily" allow traffic → Still open 2 years later
+Case 3: Encryption downgraded from AES-256 to AES-128 for "performance" → Left production data vulnerable
+Compliance Impact:
+NIST SP 800-53 CM-2 (Baseline Configuration)
+GDPR Article 27 (Controls Effectiveness)
+CIS Benchmark Configuration Scoring
+
+Challenge Overview
+Build a system to:
+Establish baseline security configurations
+Monitor real-time changes across all controls
+Detect when changes introduce risk
+Alert on high-impact drifts before they cause damage
+Track who changed what and why
+
+Data Reality & Edge Cases (Making it Complex)
+Your solution must handle real-world infrastructure chaos:
+Configuration Complexity:
+Configs in multiple formats (JSON, YAML, text-based CLI configs)
+Different baselines for different environments (prod vs staging)
+Legacy vs modern systems (30-year-old firewalls + new cloud infrastructure)
+Inherited changes ("Why is this firewall rule open? No one knows")
+Vendor-specific configurations (Palo Alto != Cisco != AWS)
+Ambiguity in Risk:
+Is port 8080 open dangerous? (Depends: internal vs external, app, compliance)
+Is encryption downgrade risky? (AES-256 → AES-128: yes. AES-128 → AES-256: improvement)
+What if change request says "diagnostic access, 1 week only" but it's 6 months old?
+Temporary emergency changes that become permanent
+Changes done "during maintenance windows" but never reverted
+Temporal Challenges:
+Configs change every day (100+ changes daily)
+Some are automated (Kubernetes auto-scaling changes security groups)
+Some are manual (engineer SSH into prod box, modifies firewall, forgets)
+CI/CD deployments change configs constantly (legitimate or drift?)
+Historical data incomplete (changes not logged 2+ years ago)
+The Challenge:
+Your LLM/solution must:
+Distinguish benign from risky (not just "config changed" but "is it dangerous?")
+Handle context (emergency bypass vs permanent vulnerability)
+Reduce false positives (CI/CD deployments aren't drift!)
+Explain impact (this drift violates NIST SC-7 and could expose internal apps)
+
+Approach Options
+Option A: AI-Driven Drift Intelligence (Advanced)
+Best for: ML engineers, NLP enthusiasts
+Technical Approach:
+Parse configuration files → Extract policies programmatically
+Train ML model: "Learn what safe/unsafe configurations look like"
+Detect anomalous changes using isolation forests or autoencoders
+Use NLP to parse change request descriptions ("increased timeout for debugging" vs "reduce encryption") → Risk categorization
+Correlate with incident history ("we had a breach after this config change")
+Output: Intelligent alerts ("This change has 87% confidence of introducing vulnerability")
+Stack: Python, scikit-learn, NLP (Hugging Face), AWS/Azure APIs, Pandas
+Complexity:  (5/5)
+Effort: 40-50 hours
+
+Option B: Configuration Baseline Comparison (Intermediate)
+Best for: DevOps / Infrastructure engineers
+Technical Approach:
+Define baseline configurations (YAML/JSON)
+Pull current configurations from all systems (APIs)
+Compare baseline vs current → Generate diffs
+Flag risky changes using heuristic rules:
+"Logging disabled?" = HIGH RISK
+"Encryption strength reduced?" = HIGH RISK
+"Firewall rule broadened?" = MEDIUM RISK
+Visualize drift timeline with annotations
+Output: Control health dashboard showing drift severity
+Stack: Python, configuration management (Terraform/Ansible), REST APIs, visualization (Plotly)
+Complexity:  (3/5)
+Effort: 25-35 hours
+
+Option C: Simple Compliance Checker (Beginner-Intermediate)
+Best for: Full-stack developers, security analysts
+Technical Approach:
+Build web app that ingests configuration CSVs
+Define "policy rules" in a simple format (JSON):
+
+Score each control: pass/fail/degrade
+Generate compliance report: "145/200 controls passing (72%)"
+Simple dashboard showing compliance by category
+Output: Excel/PDF compliance summary, recommendations
+Stack: Python (Flask/FastAPI), HTML/CSS, basic JavaScript, CSV handling
+Complexity:  (2/5)
+Effort: 15-25 hours
+
+Sample Data Provided
+Files in `sample_data/`:
+
+Anomaly distribution in labels:
+Anomalous drift events: ~57% (logging disabled, encryption downgrade, access broadened, unapproved changes)
+Benign changes: ~43% (approved updates, maintenance, CI/CD pipeline changes)
+Self-Evaluation:
+
+Challenge: With 1,000 events over 365 days, CI/CD deployments, maintenance windows, and emergency fixes are all mixed in. Your solution must distinguish *authorised routine changes* from *risky security drift*.
+Sample Control Data:
+
+
+Success Criteria
+
+
+Deliverables
+Drift Detection Engine (code to detect & classify changes)
+Baseline Configuration Store (JSON format for all 200 controls)
+Alert System (alerts prioritized by risk level)
+Dashboard (shows control health, drift timeline, risk hotspots)
+Sample Audit Report (10-15 detected drifts with impact)
+Remediation Playbook (how to fix each drift type)
+
+Framework Alignment
+NIST SP 800-53:
+CM-2: Baseline Configuration
+CM-3: Configuration Change Control
+SI-12: Information Management
+GDPR:
+Article 23: Restrictions on Processor Rights
+Article 32: Security of Processing (configs must stay compliant)
+CIS Benchmarks:
+Security Configuration Management
+Continuous Monitoring
+
+Expected Output Example
+
+
+Example Walkthrough: From Raw Data to Alert
+Input: Configuration Change
+
+Expected Output:
+
+
+
+
+Enterprise Challenge: Auditors ask "Prove your controls are working" — governance teams spend weeks gathering evidence instead of managing risk.
+
+The Business Problem
+Scenario: Enterprise must prove compliance with:
+SOX (financial controls)
+GDPR (data protection)
+HIPAA (healthcare data)
+PCI-DSS (payment card data)
+ISO 27001 (information security)
+NIST Cybersecurity Framework
+Current Process (Manual & Slow):
+
+The Pain:
+72+ hours per audit (manual gathering & correlation)
+Inconsistent evidence (different people document differently)
+Missing audit trails (discovered mid-audit that evidence wasn't captured)
+High cost (auditor time, internal resources)
+Compliance gaps (evidence not captured = control fails)
+Real Impact:
+Audit failures delay project approvals by 4-6 weeks
+Controls fail not because they don't exist, but because evidence wasn't documented
+Compliance team is reactive bottleneck, not strategic
+
+Challenge Overview
+Build a system to:
+Automatically collect evidence from control systems (logs, configs, reports)
+Link evidence to specific policy requirements
+Track evidence over time (audit trails)
+Generate compliance reports automatically
+Enable auditor to query compliance status with confidence
+
+Data Reality & Edge Cases
+Real-World Complexity:
+Evidence formats vary wildly (PDFs, CSVs, API responses, plain text)
+Policy documents poorly written (ambiguous requirements, overlap between policies)
+Automation incomplete (some evidence manual, some automated)
+Historical data gaps (evidence not captured 2+ years ago)
+Compliance framework conflicts (GDPR vs SOX requirements differ)
+Ambiguity You Must Handle:
+Is evidence "recent enough" to prove compliance? (last month? last quarter?)
+Multiple pieces of evidence for one requirement (which is most important?)
+Conflicting evidence ("Encryption enabled" but "Key rotation untested")
+Temporal gaps (evidence captured 3 months ago, is control still working?)
+Third-party evidence (vendor certifications, can we trust?)
+Your Challenge:
+Parse poorly written policies using NLP (extract clear requirements)
+Link evidence intelligently (not all evidence applies to all requirements)
+Handle missing evidence (no panic - explain gaps clearly)
+Generate audit narratives (LLM-powered: explain compliance posture)
+
+Approach Options
+Option A: LLM-Powered Evidence Intelligence (Advanced)
+Best for: NLP enthusiasts, AI engineers
+Technical Approach:
+Extract policy requirements from documents using LLM (fine-tuned ChatGPT) or open-source models
+Input: "All data at rest must be encrypted using AES-256 or stronger"
+Output: Structured rule: {requirement: "encryption", standard: "AES-256+", scope: "data_at_rest"}
+Map controls to policies using semantic search
+Find all evidence that supports "We use AES-256 encryption"
+Auto-generate audit narratives:
+"We require AES-256 encryption (GDPR Article 32, NIST SC-7). Evidence: AWS KMS configured with AES-256 (last verified 2026-04-15). Status: COMPLIANT"
+Create audit-ready reports with LLM-generated executive summaries
+Stack: Python, Hugging Face Transformers / OpenAI API, semantic search (embeddings), Pandas, reporting
+Complexity:  (5/5)
+Effort: 45-55 hours
+
+Option B: Evidence Linking & Automation (Intermediate)
+Best for: Data + backend engineers
+Technical Approach:
+Build evidence collection pipeline:
+Query logs from Splunk/CloudTrail
+Extract configs from AWS Config, Kubernetes, etc.
+Fetch audit reports from tools (antivirus, 2FA systems)
+Create mapping database:
+
+Evidence validator:
+Has evidence been captured in last 30 days?
+Is evidence non-repudiable (signed logs)?
+Does evidence prove requirement was met?
+Generate compliance scorecard (pass/fail per requirement)
+Stack: Python, data connectors (boto3, requests), SQL database, basic web UI (Flask)
+Complexity:  (3/5)
+Effort: 30-40 hours
+
+Option C: Simple Compliance Dashboard (Beginner)
+Best for: Full-stack web developers, non-technical analysts
+Technical Approach:
+Build web app interface to manage evidence
+Manual or semi-automated evidence uploads (CSV, PDF, log files)
+Tag evidence to requirements:
+Select policy: "GDPR Article 32"
+Select requirement: "Encryption required"
+Upload evidence: "AWS KMS Report 2026-04-15.pdf"
+Compliance report generator:
+Shows % requirements with evidence
+Red/Yellow/Green status indicators
+Export to PDF for auditor
+Simple search: "Show all evidence for SOX compliance"
+Stack: Python (Flask/Django), PostgreSQL, basic HTML/CSS/JS, PDF generation
+Complexity:  (2/5)
+Effort: 20-30 hours
+
+Sample Data Provided
+Files in `sample_data/`:
+
+Anomaly distribution in labels:
+Stale evidence: evidence older than 90 days without approval (~34%)
+Missing documentation: incomplete evidence for requirements (~14%)
+Low confidence evidence: approved but below threshold (~15%)
+Rejected evidence: reviewed and rejected (~7%)
+Self-Evaluation:
+
+Note on the original problem description scale: The 50 policies / 5,000 evidence records referenced above reflects the *target production scale* your solution should be designed to handle. The sample dataset (500 records) is your development and validation set.
+Example Policy Document:
+
+Example Evidence Record:
+
+
+Success Criteria
+
+
+Deliverables
+Policy parser (extracts requirements from documents)
+Evidence mapping engine (links requirements to data sources)
+Compliance report generator (audit-ready PDFs)
+Dashboard/UI (query compliance status)
+Evidence collector (at least 2 integrations: CloudTrail + one other)
+Sample audit report (10-15 requirements with evidence)
+
+Compliance Frameworks Included
+GDPR: Articles 5, 32, 33, 35, 36
+SOX 404: Internal Controls Assessment
+NIST SP 800-53: AC-2, AU-2, CA-6, CP-2, SC-7
+ISO 27001: A.6, A.10, A.12, A.13
+PCI-DSS: Requirements 1-12
+
+Expected Output
+
+
+Example Walkthrough
+Input: Policy Text + Evidence
+
+Expected Output:
+
+
+
+
+Enterprise Challenge: Detect abnormal data access patterns before sensitive information leaves the building.
+
+The Business Problem
+Scenario: Enterprise processes 1M+ daily data access events across:
+SQL databases (financial, HR, customer data)
+Data lakes (analytics, machine learning datasets)
+BI/reporting tools (Tableau, Power BI, Qlik)
+File shares & cloud storage (OneDrive, SharePoint, Google Drive)
+APIs & data exports
+The Threat:
+
+Real Incidents:
+Insider A: Finance analyst downloaded entire GL ledger before resignation (Monday), data sold to competitor
+Insider B: HR analyst accessed salaries for 500 employees with jealous motive
+Compromised Cred: Hacker used stolen admin password to access customer database at 3 AM (no one noticed)
+Negligence: Developer configured app to export unencrypted customer data to test environment
+The Challenge:
+Too many access events to review manually (1M+ daily)
+Naive alerting creates alert fatigue ("80% false positives")
+⏱ Attacks detected weeks/months after data access
+Hard to tell "normal work" from "suspicious" without context
+Compliance Gaps:
+GDPR Article 32: Track data access, detect unauthorized use
+NIST IR-4: Incident detection response procedures
+SOX 302: Controls over sensitive financial data access
+
+Challenge Overview
+Build a system to:
+Ingest data access logs from multiple sources
+Establish baseline behavior per user/role
+Detect anomalies with high accuracy
+Classify risk level (low, medium, high, critical)
+Investigate incidents efficiently (provide context)
+Prevent exfiltration (integrate with DLP if possible)
+
+Data Reality & Edge Cases
+Behavioral Complexity:
+Users have legitimate seasonal patterns (Finance team: busier month-end)
+Role changes create false positives (new admin has unusual access)
+On-call duties (engineer with elevated access 1 week/month)
+Contractors have short tenure (limited baseline history)
+Service accounts have no "normal" pattern
+Legitimate bulk exports (data warehouse refreshes, backups)
+Data Quality Issues:
+Missing context (why did user access this data?)
+Timezone inconsistencies
+Access method variations (SQL, API, UI, download)
+Data sensitivity classifications incomplete
+User employment status data stale
+Evaluation Challenges:
+Define "anomaly" precisely (statistical outlier vs risky activity)
+Distinguish insider threat from legitimate work
+Handle approved exceptions (exceptions that should suppress alerts)
+False positives destroy trust in system
+
+Approach Options
+Option A: Behavioral ML + LLM Narratives (Advanced)
+Best for: ML engineers, behavioral analysts
+Technical Approach:
+Extract features per user per day:
+Time of access (typical hours: 9-5 vs 2-3 AM?)
+Data sensitivity accessed (public vs confined data?)
+Volume accessed (10 rows vs 100k rows?)
+Destination (local machine vs external email?)
+Frequency (first time accessing this system?)
+Train isolation forest / autoencoder on "normal" behavior
+Score each access: 0-100 risk score
+LLM-powered investigation:
+Input: User access pattern, their role, data sensitivity
+Output: "Finance analyst accessed 50k customer records at 3 AM to personal email = HIGH RISK"
+Output: Risk dashboard with explanations and recommended actions
+Stack: Python, Scikit-learn/PyTorch, Pandas, LLM API (OpenAI/HuggingFace), Plotly
+Complexity:  (5/5)
+Effort: 40-50 hours
+
+Option B: Statistical Anomaly Detection (Intermediate)
+Best for: Data engineers, statisticians
+Technical Approach:
+Build statistical profiles per user:
+Distribution of access times (histogram)
+Typical systems/databases accessed
+Typical data volume per day
+Typical destinations (local file system vs cloud)
+Flag deviations using Z-score or IQR (outlier detection)
+Context enrichment:
+Is user on vacation? (check HR calendar)
+Is this a job change? (elevated access expected)
+Is there a business event? (month-end closing = more access)
+Risk scoring: Combined deviation score across features
+Output: Alert list with "deviation factor" explaining the anomaly
+Stack: Python, NumPy/SciPy, Pandas, SQLite, Plotly
+Complexity:  (3/5)
+Effort: 25-35 hours
+
+Option C: Rule-Based Alerting Engine (Beginner-Intermediate)
+Best for: Full-stack developers, security analysts
+Technical Approach:
+Define simple rules in JSON:
+
+Build rule engine to evaluate each access event
+Track exceptions (e.g., "Finance can do bulk exports on Fridays")
+Generate daily alert summary reports
+Simple dashboard showing flagged accesses, user profiles, context
+Stack: Python, REST API (Flask), PostgreSQL, JSON rule format, basic UI
+Complexity:  (2/5)
+Effort: 15-25 hours
+
+Sample Data Provided
+Files in `sample_data/`:
+
+Anomaly distribution in labels:
+Event-level anomalies: ~46% (bulk exports, after-hours, off-hours admin, cross-dept access)
+User-level risk: ~17% (stale accounts, over-privileged users)
+Self-Evaluation:
+
+Design for scale: The sample dataset has 1,200 events across 365 days. Your solution architecture should handle 1M+ daily events. Document *how* you would scale it (streaming, partitioning, distributed compute) even if the sample runs locally.
+Sample Access Log:
+
+Sample User Profile:
+
+
+Success Criteria
+
+Baseline Comparison:
+Naive approach (flag all night access): Precision 40%, Recall 35%
+Your target: Precision/Recall both > 70%
+
+Deliverables
+Access log ingestion (supports CSV, API formats)
+Anomaly detection model (trained on provided data)
+Risk scoring engine (ranks alerts by severity)
+Dashboard (show top alerts, user profiles, data assets)
+Investigation toolkit (contextual info for each alert)
+Sample incident report (10-15 detected threats with narratives)
+Evaluation metrics (metrics on ground truth labels)
+
+Regulatory Alignment
+GDPR Article 32: Security measures for personal data processing
+Monitor unauthorized access
+Detect data exfiltration attempts
+NIST IR-4: Incident handling procedures
+Detection capability (anomaly detection)
+Response procedures (alerting + investigation)
+SOX 302: Internal Controls over financial reporting
+Unauthorized access to GL, AR, AP systems
+Audit trail of data access
+
+Example Output
+
+
+Example Walkthrough
+Input Data:
+
+Expected Output:
+
+
+
+
+Enterprise Challenge: 30% of security breaches exploit exceptions to policy. Are you managing risk or creating it?
+
+The Business Problem
+Scenario: Enterprise maintains 100+ policies. Reality: reality deviates from policy constantly.
+Common Scenarios:
+
+The Problem:
+Exception requests managed in email threads or Excel sheets
+No visibility into active exceptions (how many exist?)
+Exceptions expire but aren't revoked (orphaned access)
+Auditors: "Which exceptions are justified? Still needed?"
+Risk: "We approved an exception, no one remembers it existed"
+Real Failure:
+Case 1: Exception granted "temporarily" for network change → 3 years later, still active → leads to breach
+Case 2: 15 security exceptions pending review for "3-6 months" → No one knows which are still valid
+Case 3: Policy says "All vendor access requires approval" → 5 vendors have undocumented exceptions
+Compliance Impact:
+NIST AC-2: Access controls must be consistently applied
+GDPR Article 25: Data protection by design (exceptions undermine this)
+CIS Controls 1.1: Inventory of IT assets (including exceptions)
+
+Challenge Overview
+Build a system to:
+Centralize all policy exceptions/waivers in one place
+Capture exception metadata (who, what, why, when expires)
+Visualize active exceptions (portfolio view, risk heatmap)
+Alert on exceptions approaching expiry
+Track exception lifecycle (request → approval → renewal/revocation)
+Report exception status to auditors
+
+Data Reality & Edge Cases
+Exception Management Chaos:
+Exceptions live in emails, Slack threads, Excel sheets (not centralized)
+"Temporary" exceptions that become permanent (5-year "temporary" access!)
+Vague justifications ("business need", "emergency", "legacy issue")
+No renewal process (exceptions never formally revoked, just forgotten)
+Overlapping exceptions (same access via multiple waivers)
+Undocumented exceptions (someone grants access verbally, no record)
+Ambiguity You Must Handle:
+Is exception still valid? (Reported as active but hasn't been renewed in 2 years)
+Multiple approvers with conflicting decisions
+Emergency exceptions that should have strict time limits
+Exceptions that should have escalated before expiry
+Risk accumulation (person with 10 small exceptions = major risk?)
+
+Approach Options
+Option A: Smart Exception Lifecycle Automation (Advanced)
+Best for: Full-stack engineers, workflow automation specialists
+Technical Approach:
+Build exception tracking system with lifecycle states:
+
+Automated alerts:
+Email approver when exception expires in 7 days
+Escalate if renewal requested but not approved
+Flag exceptions older than 12 months ("Is this still needed?")
+Risk scoring:
+Exception type + duration → risk increment
+Track number of active exceptions per person (abuse indicator)
+Highlight high-risk exception combos ("3 security exceptions for same admin")
+Dashboard showing:
+Exception portfolio (by type, department, approver)
+Renewal rate (% of exceptions renewed vs revoked)
+Exception creep (trending: are exceptions increasing?)
+Integration: Notify relevant teams when exception expires
+Stack: Python (FastAPI/Flask), PostgreSQL, workflow engine (Celery), email/Slack alerts, React dashboard
+Complexity:  (4/5)
+Effort: 35-45 hours
+
+Option B: Exception Registry & Auditing (Intermediate)
+Best for: Data engineers, security analysts
+Technical Approach:
+Build exception database schema:
+
+Create queries/reports:
+"Show all active exceptions expiring in next 30 days"
+"Show all exceptions by department" (where's the risk?)
+"Show exceptions older than 12 months" (should they exist?)
+"Show exceptions for same person" (multi-exception risk?)
+Dashboard with sorted/filtered views
+Export audit reports (for quarterly management review)
+Risk scoring:
+High-risk exceptions: (admin access + critical system + long duration)
+Flag exceptions with vague justification ("temporary issue")
+Stack: Python, PostgreSQL, SQLAlchemy ORM, Pandas, visualization (Plotly), simple web UI
+Complexity:  (3/5)
+Effort: 25-35 hours
+
+Option C: Simple Exception Tracker (Beginner-Intermediate)
+Best for: Non-technical analysts, process improvement
+Technical Approach:
+Web form to log exceptions:
+Exception type (access, firewall rule, encryption waiver)
+Justification (required)
+Start/end date
+Approver (dropdown)
+Business unit affected
+Simple Excel-like table view:
+Sortable by all fields
+Color-coded by status (Active=Green, Expiring=Yellow, Expired=Red)
+Search/filter capability
+Monthly email Report:
+"# Active exceptions today"
+"# Exceptions expiring this month"
+"# Exceptions overdue for renewal review"
+Export to Excel for audit meetings
+Stack: Python (Flask), SQLite, HTML/CSS/JavaScript, email notifications
+Complexity:  (2/5)
+Effort: 15-25 hours
+
+Sample Data Provided
+Files in `sample_data/`:
+
+Anomaly distribution in labels (~37% anomalous):
+EXPIRED_ACTIVE_EXCEPTION — expiry passed but still marked Active (critical/high)
+CRITICAL_RISK_EXCEPTION — categorised as Critical risk, needs re-review (high)
+LONG_RUNNING_EXCEPTION — ran >180 days without renewal (high)
+HIGH_RISK_LONG_EXCEPTION — high-risk, active >90 days without review (medium)
+STALLED_REVIEW — pending review for >30 days (medium)
+Self-Evaluation:
+
+Full year coverage note: The dataset spans 365 days, so some exceptions were created months ago and have already expired — a key anomaly type. Others were renewed; some were never revoked. The lifecycle mix is intentional to challenge your solution.
+Sample Exception Record:
+
+Exception Categories:
+Admin/Root access (highest risk)
+Firewall rule exceptions (medium risk)
+Encryption/compliance waivers (high risk)
+Data access exceptions (high risk)
+Development environment exceptions (low risk)
+
+Success Criteria
+
+
+Deliverables
+Exception tracking system (centralized registry)
+Risk scoring model (assigns risk levels)
+Alert system (expiry notices, escalations)
+Dashboard (portfolio view, sortable/filterable)
+Audit reports (status summaries for management)
+Integration recommendations (how to integrate with ITSM, email)
+
+Framework Alignment
+NIST SP 800-53:
+AC-2: Account Management (exceptions must not circumvent)
+PL-4: Rules of Behavior (exceptions must be documented)
+GDPR Article 25:
+Data Protection by Design
+Exceptions should be exceptional, tracked, and justified
+CIS Controls 1.1:
+Inventory of IT assets (exceptions are assets)
+Authorized/unauthorized access
+
+Example Output
+
+
+Example Walkthrough
+Input: Exception Record
+
+Expected Output:
+
+
+
+
+Enterprise Challenge: 60% of data breaches involve third parties. Managing vendor risk at scale is a hiring/firing nightmare.
+
+The Business Problem
+Scenario: Enterprise works with 1,000+ vendors:
+Cloud providers (AWS, Azure, Salesforce)
+Contractors & consultants
+Software vendors (antivirus, backup, security)
+Integration partners
+Managed service providers (MSPs)
+Payment processors, HR platforms, etc.
+The Nightmare:
+
+Real Incidents:
+Case 1: Vendor breach exposing customer PII → No notification from vendor (contract unclear)
+Case 2: Contractor access never revoked after project ended → Sold data to competitor
+Case 3: Cloud backup vendor changed terms → Now claiming data ownership
+Case 4: Payment processor security downgrade → Exposed during PCI-DSS audit
+The Challenge:
+Vendor risk assessment is spreadsheet-based (inconsistent, outdated)
+⏰ No clear scoring system ("Is this vendor acceptable?")
+Auditors ask "Who has access to customer data?" → Can't answer
+Continuous monitoring impossible (manually check each vendor quarterly?)
+No playbook for handling vendor breaches/issues
+Compliance Impact:
+GDPR Article 28: Data Processor requirements (vendors MUST meet standards)
+GDPR Article 33: Breach notification (if vendor is breached, you're liable)
+SOX 404: Dependency on third parties = internal control risk
+NIST SP 800-53 SA-9: Third-party services security requirements
+
+Challenge Overview
+Build a system to:
+Inventory all vendors/third-parties and their access/risks
+Assess vendor security posture and compliance
+Score vendor risk level (traffic light system)
+Monitor vendor risk continuously (certifications, breaches)
+Alert on risk changes (vendor downgrade, new breach)
+Support contract negotiation (risk-based SLAs)
+Track remediation (when vendor fixes issues)
+
+Data Reality & Edge Cases
+Vendor Management Nightmares:
+Vendors change frequently (security downgrades, breaches discovered later)
+Data access scope poorly documented ("they access the main database"?)
+Breach databases incomplete (not all breaches publicized)
+Certifications expire (vendor had SOC 2, expires next month)
+Financial health deteriorates (vendor bankruptcy risk?)
+Third-party incidents (vendor got breached → you're notified late)
+Conflicting information (vendor says SOC 2 current, but expired)
+Ambiguity in Risk:
+Is a small vendor with no SOC 2 riskier than large vendor with old audit?
+Breach 5 years ago vs recent incident - which matters more?
+Vendor fixing 1 breach vs vendor dismissing breach concerns?
+How to weight data access scope + compliance posture + financial health?
+
+Approach Options
+Option A: AI-Powered Vendor Intelligence (Advanced)
+Best for: Data scientists, security researchers
+Technical Approach:
+Data ingestion from multiple sources:
+Contract documents (extract: data access, SLAs, compliance requirements)
+Security assessments (questionnaires, audit reports, certifications)
+Breach databases (check if vendor is breached)
+Public records (financial health, regulatory issues)
+Third-party integrations (vendor's own API for SOC 2 status, etc.)
+LLM-assisted analysis:
+Extract contract obligations using NLP (identify data access permissions)
+Summarize vendor compliance (parse SOC 2, ISO 27001 reports into structured format)
+Generate risk narratives ("Vendor has SOC 2 Type II but uses older encryption")
+Risk scoring engine:
+Combine: Breach history + Data access scope + Compliance maturity + Financial stability
+Dynamically recalculate when new info appears
+Output: Red/Yellow/Green with change alerts
+Dashboard:
+Portfolio view (100 vendors, see who's risky at a glance)
+New breach detection (monitor public breach databases)
+Certification tracking (when SOC 2 expires?)
+Stack: Python, LLM API, web scraping, breach DB APIs, Pandas, Plotly
+Complexity:  (5/5)
+Effort: 45-55 hours
+
+Option B: Vendor Risk Scorecard Builder (Intermediate)
+Best for: Risk analysts, process engineers
+Technical Approach:
+Build vendor risk framework:
+
+Create vendor profile database:
+Name, contract info, data access, assessments
+Store risk scores (refresh quarterly/annually)
+Track changes over time
+Build dashboard:
+All vendors in grid (sorted by risk)
+Filter/search capabilities
+Drill-down for each vendor (see why they're risky)
+Alerts:
+Contract expiring (60 days out)
+Certification expiring (renewal needed)
+Assessment overdue (should be re-assessed)
+Known breach detected
+Stack: Python, SQLite/PostgreSQL, Pandas, Flask web UI, Plotly visualizations
+Complexity:  (3/5)
+Effort: 30-40 hours
+
+Option C: Vendor Registry & Tracking System (Beginner-Intermediate)
+Best for: Full-stack web developers
+Technical Approach:
+Simple CRUD app to manage vendor info:
+Vendor registry (add/edit/delete vendor)
+Contract upload & tracking (start/end dates)
+Access mapping (which systems? what data?)
+Risk questions/checklist (e.g., "Has SOC 2?" yes/no)
+Certifications (store PDF, expiry dates)
+Contact tracking (who's the vendor liaison?)
+Dashboard features:
+Sorted vendor list
+Alert indicators (contract expiring, cert expired)
+Simple bar chart: # vendors by risk level
+Export to CSV for audits
+Email notifications:
+Monthly vendor summary
+Alerts on expiring contracts/certs
+Stack: Python (Flask/Django), PostgreSQL, HTML/CSS/JS, file upload handling
+Complexity:  (2/5)
+Effort: 20-30 hours
+
+Sample Data Provided
+Files in `sample_data/`:
+
+Anomaly distribution in labels (~80% flagged):
+Note: High flag rate is intentional — vendor risk management is about *tiered response*, not binary safe/unsafe. Your solution should produce a ranked risk register, not just a pass/fail list.
+
+Self-Evaluation:
+
+Evaluation focus: For vendor risk, recall on CRITICAL/HIGH matters more than overall precision. Missing a breached vendor with access to customer PII is far worse than over-flagging a mid-risk vendor.
+Sample Vendor Record:
+
+Ground Truth Labels: 20 vendors flagged as "high risk" for evaluation
+
+Success Criteria
+
+
+Deliverables
+Vendor registry (centralized inventory)
+Risk scoring model (formula + rationale)
+Contract extraction (key terms from PDFs)
+Compliance tracking (certs, SOC 2, ISO, GDPR)
+Dashboard (portfolio view, alerts, filters)
+Integration recommendations (connect to ITSM, procurement)
+Sample reports (risk by category, trending, recommendations)
+
+Framework Alignment
+GDPR Article 28:
+Data Processor must have "appropriate technical and organizational measures"
+Vendor breach = potential GDPR breach
+Documentation required
+GDPR Article 33:
+Breach notification within 72 hours
+Vendor breach affects your notification timeline
+NIST SP 800-53 SA-9:
+Third-party service security requirements
+Regular vendor assessments required
+Incident response plan must address vendor breaches
+SOX 404:
+Control dependencies on third parties
+Need to evaluate vendor controls
+Continuity/availability risks
+
+Example Output
+
+
+Example Walkthrough
+Input: Vendor Record + Breach Data
+
+Expected Output:
+
+
+
+GRC Hackathon 2026
+Problem Statements : All Tracks
+
+6 Real Enterprise GRC Challenges  |  3 Difficulty Levels Each  |  Ground Truth Labels Included
+#
+Problem
+Track
+Difficulty
+01
+Identity Sprawl & Privilege Abuse Detection
+Access Control & Identity
+Intermediate–Advanced
+02
+Security Control Drift & Misconfiguration
+Config & Compliance
+Intermediate
+03
+Automated Compliance Evidence Collection
+Audit & Evidence
+Advanced
+04
+Data Access Audit & Insider Threat Detection
+Data Security
+Intermediate–Advanced
+05
+GRC Exception & Policy Waiver Management
+Policy Governance
+Intermediate–Advanced
+06
+Third-Party & Vendor Risk Management
+Third-Party Risk
+Intermediate–Advanced
+Problem 01   Identity Sprawl & Privilege Abuse Detection
+Track: Access Control & Identity Management   |   Difficulty: Intermediate–Advanced
+
+user_id,username,email,department,privilege_level,systems_access,last_login,days_inactive,is_active,hire_date,role_title
+USR028,bella.green,bella.green@company.com,CTO_OFFICE,admin,"PROD-DB,PROD-APP,ADMIN-CONSOLE,ALL-LOGS,SIEM",2026-04-01,19,false,2009-01-15,Chief Technology Officer
+
+{
+  "user_id": "USR028",
+  "username": "bella.green",
+  "risk_level": "CRITICAL",
+  "risk_score": 92,
+  "findings": [
+    {
+      "finding": "STALE_PRIVILEGED_ACCOUNT",
+      "details": "Admin account inactive for 19 days with access to production systems",
+      "severity": "HIGH",
+      "recommendation": "Review termination status or reactivate"
+    },
+    {
+      "finding": "BROAD_PRIVILEGE_SCOPE",
+      "details": "Admin has access to 5 critical systems including PROD-DB and SIEM",
+      "severity": "MEDIUM",
+      "recommendation": "Audit if all access is necessary for current role"
+    },
+    {
+      "finding": "CTO_ROLE_EXCEPTION",
+      "details": "CTO_OFFICE accounts typically have broad access; flag only if policy changed",
+      "severity": "INFORMATIONAL",
+      "recommendation": "Verify with HR if still employed"
+    }
+  ],
+  "confidence": 0.87,
+  "suggested_actions": [
+    "Confirm employment status with HR",
+    "If no longer employed, revoke all access immediately",
+    "If employed, investigate why inactive for 19 days"
+  ],
+  "next_escalation": "Security manager review required"
+}
+File
+Records
+Coverage
+Description
+`identity_users.csv`
+300
+Current snapshot
+User accounts, privilege levels, last login, department
+`identity_events.csv`
+900
+Full 365 days (Apr 2025 – Apr 2026)
+Access events with timestamps, resource, sensitivity
+`identity_users_labels.csv`
+300
+All users
+Ground truth: is_anomaly, anomaly_type, severity, explanation
+`identity_events_labels.csv`
+900
+All events
+Ground truth: is_anomaly, anomaly_type, severity, explanation
+
+import pandas as pd
+from sklearn.metrics import precision_score, recall_score, f1_score
+
+# Load your predictions vs ground truth
+labels = pd.read_csv('identity_events_labels.csv')
+# Assuming your solution adds a column 'predicted_anomaly' (True/False)
+# labels['predicted_anomaly'] = your_model.predict(events)
+
+y_true = labels['is_anomaly'].astype(int)
+y_pred = labels['predicted_anomaly'].astype(int)  # your output
+
+print(f"Precision: {precision_score(y_true, y_pred):.2%}")
+print(f"Recall:    {recall_score(y_true, y_pred):.2%}")
+print(f"F1 Score:  {f1_score(y_true, y_pred):.2f}")
+Problem 02   Security Control Drift & Misconfiguration Detection
+Track: Security Configuration & Compliance   |   Difficulty: Intermediate
+
+  {
+    "rule": "logging_must_be_enabled",
+    "check": "control.logging == true",
+    "severity": "high",
+    "remediate": "Enable logging and audit trail"
+  }
+File
+Records
+Coverage
+Description
+`baseline_configs.json`
+8 controls
+Baseline state
+Reference baseline for each control type
+`config_drift_events.csv`
+1,000
+Full 365 days (Apr 2025 – Apr 2026)
+Who changed what, when, approved/not, risk severity
+`config_drift_labels.csv`
+1,000
+All drift events
+Ground truth: is_anomaly, anomaly_type, severity, explanation
+
+import pandas as pd
+from sklearn.metrics import classification_report
+
+labels = pd.read_csv('config_drift_labels.csv')
+# labels['predicted_anomaly'] = your_model.predict(drift_events)
+
+print(classification_report(
+    labels['is_anomaly'],
+    labels['predicted_anomaly'],
+    target_names=['Benign', 'Risky Drift']
+))
+
+control_id,control_name,system,baseline_value,current_value,last_change,status,severity
+FW-001,Firewall AllowedPorts,Palo Alto,80;443;22,80;443;22;8080,2026-04-15,DRIFTED,MEDIUM
+ENC-044,Database Encryption,AWS RDS,AES-256,AES-128,2026-04-10,DRIFTED,HIGH
+LOG-012,CloudTrail Enabled,AWS,true,false,2026-04-08,DRIFTED,CRITICAL
+Metric
+Target
+Why
+Detection Rate
+> 80%
+Catch actual risky drifts
+False Positive Rate
+< 15%
+Don't alert on benign changes
+Time Lag
+< 1 hour
+Near real-time detection
+Explainability
+Every alert has reason
+Non-security teams understand it
+Compliance Mapping
+Drifts → NIST/CIS/GDPR
+Show regulatory impact
+
+Control Drift Summary Report
+=============================
+
+Period: 2026-01-01 to 2026-04-15
+Total Controls: 200
+Total Changes: 10,000
+
+HIGH RISK DRIFTS (Require Immediate Action)
+- FW-001: Firewall rule broadened (3 new ports opened)
+- LOG-044: CloudTrail logging disabled for 2 hours
+- ENC-012: Database encryption downgraded AES-256 → AES-128
+
+MEDIUM RISK DRIFTS (Review)
+- TIMEOUT-023: Connection timeout increased 30s → 120s
+
+COMPLIANCE IMPACT
+- NIST CM-2 violations: 5
+- GDPR Article 32 exposure: 2 controls
+- CIS Benchmark score: 72% (up from 70%)
+
+2026-04-08 02:47:00,LOG-012,modification,cloudtrail_enabled,true,false,admin_003,pending,LOGGING_DISABLED
+
+{
+  "drift_id": "LOG-012-20260408",
+  "severity": "CRITICAL",
+  "risk_score": 98,
+  "explanation": "CloudTrail logging disabled without approval during off-hours. Creates 6-hour audit gap for all AWS API calls, violating compliance requirements and hiding potential breach activity.",
+  "compliance_violations": ["NIST SI-12", "GDPR Article 32"],
+  "recommended_action": "Immediately re-enable logging and audit access during blind period"
+}
+Problem 03   Automated Compliance Evidence Collection & Audit
+Track: Compliance & Audit   |   Difficulty: Advanced
+
+1. Auditor asks: "Show me evidence that encryption is working"
+   ↓
+2. Compliance team sends emails to:
+   - Infrastructure team ("Get me encryption logs")
+   - Security team ("Get me key rotation records")
+   - Database team ("Get me access controls")
+   ↓
+3. Teams gather data (3-5 days)
+   ↓
+4. Compliance team manually correlates evidence
+   ↓
+5. Generates audit report (Excel!?)
+   ↓
+6. Auditor reviews, requests clarifications (iteration cycle)
+
+  Policy Requirement ← Links to → Control System ← Links to → Evidence Location
+  "Encryption required" ← AWS KMS ← CloudTrail logs
+  "Access logging" ← Okta ← IAM audit trails
+File
+Records
+Coverage
+Description
+`policy_documents.txt`
+6 policies
+GDPR, SOX, NIST, PCI-DSS, ISO 27001, HIPAA
+Raw policy text with requirement markers
+`evidence_artifacts.csv`
+500
+Collected evidence records
+Who collected, when, freshness, review status, confidence score
+`evidence_labels.csv`
+500
+All evidence records
+Ground truth: is_anomaly, anomaly_type, severity, explanation
+
+import pandas as pd
+from sklearn.metrics import precision_score, recall_score
+
+labels = pd.read_csv('evidence_labels.csv')
+# labels['predicted_anomaly'] = your_classifier.predict(evidence_artifacts)
+
+y_true = labels['is_anomaly'].astype(int)
+y_pred = labels['predicted_anomaly'].astype(int)
+
+print(f"Precision: {precision_score(y_true, y_pred):.2%}")
+print(f"Recall:    {recall_score(y_true, y_pred):.2%}")
+# Aim for precision > 70%, recall > 60% for a strong submission
+
+POLICY: Data Protection and Encryption
+
+REQUIREMENT 1: All personal data must be encrypted at rest using
+cryptographic methods approved in NIST SP 800-175B.
+
+REQUIREMENT 2: Encryption keys must be rotated annually
+with audit logs maintained.
+
+Maps to:
+- GDPR Article 32 (Security)
+- NIST SC-7 (Boundary Protection)
+- SOX 404 (Internal Controls)
+
+{
+  "evidence_id": "EV-0012345",
+  "type": "aws_config_snapshot",
+  "timestamp": "2026-04-15T09:00:00Z",
+  "requirement_id": "REQ-ENC-001",
+  "content": "AWS KMS configured with AES-256 encryption on RDS instance prod-db-01",
+  "compliance_framework": ["GDPR", "SOX", "NIST"],
+  "verified": true,
+  "auditor_notes": ""
+}
+Metric
+Target
+Why
+Evidence Coverage
+90%+ requirements have evidence
+Can pass audit
+Time-to-Report
+< 15 min
+Enable on-demand auditing
+Evidence Freshness
+< 7 days old
+Current control status known
+Auditor Confidence
+4.5+/5 rating
+Evidence is trustworthy
+Automation Rate
+70%+ evidence auto-collected
+Reduces manual work
+
+COMPLIANCE REPORT - Q2 2026
+Generated: 2026-04-15 | Period: 2026-01-01 to 2026-03-31
+
+EXECUTIVE SUMMARY
+================
+Overall Compliance: 87% (up from 81% in Q1)
+Requirements Covered: 178/200 (89%)
+Evidence Freshness: 92% < 7 days old
+Audit Risk: LOW
+
+GDPR ARTICLE 32 - SECURITY
+Requirement: Data Encryption at Rest
+Status: COMPLIANT
+Evidence:
+  1. AWS KMS Report (2026-04-10)
+  2. Encryption Audit Trail (2026-04-08)
+  3. Key Rotation Log (2026-04-15)
+Last Verified: 2026-04-15 09:00 UTC
+Auditor Notes: All evidence present and recent
+
+GDPR ARTICLE 33 - INCIDENT NOTIFICATION
+Status: COMPLIANT
+...
+
+Policy: "All systems housing PII must use encryption at rest with keys
+rotated quarterly or per vendor recommendations (minimum 90 days)"
+
+Evidence Found:
+- AWS KMS config: AES-256 enabled
+- Key rotation logs: Last rotation 2026-01-15 (90 days ago)
+- Certificate: Valid until 2026-06-30
+
+{
+  "requirement_id": "SC-7.1",
+  "requirement_text": "Encryption at rest using AES-256+, quarterly key rotation",
+  "compliance_status": "COMPLIANT",
+  "confidence": 0.95,
+  "evidence_links": [
+    "AWS_KMS_Config_2026-04-15",
+    "KeyRotationLog_Q1-2026",
+    "SecurityAudit_2026-04-01"
+  ],
+  "narrative": "Organization encrypts all customer PII at rest using AES-256. Keys are rotated quarterly. Last rotation: 2026-01-15. Evidence verified and current. Compliant with GDPR Article 32 and NIST SC-7.",
+  "next_review_date": "2026-07-15"
+}
+Problem 04   Data Access Audit & Insider Threat Detection
+Track: Data Security & Incident Detection   |   Difficulty: Intermediate–Advanced
+
+Tuesday 2:47 AM - Junior Developer queries customer database:
+  SELECT * FROM customers WHERE salary > $200K
+
+Expected: No access at this hour
+Problem: 50,000 customer records exported to USB drive
+
+Result: Data breach discovered 6 months later
+
+  {
+    "rule_id": "off_hours_restricted_data",
+    "condition": "access_time NOT IN (8-18) AND data_sensitivity='restricted'",
+    "severity": "high",
+    "action": "alert, block"
+  },
+  {
+    "rule_id": "bulk_export",
+    "condition": "rowcount > 10000",
+    "severity": "medium",
+    "action": "alert"
+  }
+File
+Records
+Coverage
+Description
+`user_profiles.csv`
+100
+All tracked users
+Baseline: department, role, privilege, typical hours, systems
+`data_access_logs.csv`
+1,200
+Full 365 days (Apr 2025 – Apr 2026)
+Every access: what, when, where, sensitivity, time classification
+`user_profile_labels.csv`
+100
+All user profiles
+Ground truth: is_anomaly, account risk, severity, explanation
+`data_access_labels.csv`
+1,200
+All access events
+Ground truth: is_anomaly, anomaly_type, severity, explanation
+
+import pandas as pd
+from sklearn.metrics import precision_score, recall_score, f1_score
+
+events = pd.read_csv('data_access_logs.csv')
+labels = pd.read_csv('data_access_labels.csv')
+# labels['predicted_anomaly'] = your_model.predict(events)
+
+y_true = labels['is_anomaly'].astype(int)
+y_pred = labels['predicted_anomaly'].astype(int)
+
+print(f"Precision: {precision_score(y_true, y_pred):.2%}")
+print(f"Recall:    {recall_score(y_true, y_pred):.2%}")
+print(f"F1 Score:  {f1_score(y_true, y_pred):.2f}")
+
+# Severity breakdown
+for sev in ['CRITICAL', 'HIGH', 'MEDIUM']:
+    subset = labels[labels['severity'] == sev]
+    subset_pred = labels.loc[subset.index]
+    print(f"{sev} events in ground truth: {len(subset)}")
+
+timestamp,user_id,username,department,action,database,table,rowcount,destination,sensitivity
+2026-04-15 14:23:45,USR-0245,alice.smith,Finance,SELECT,GL_Ledger,accounts,150,local_workstation,high
+2026-04-15 22:47:12,USR-0245,alice.smith,Finance,EXPORT,GL_Ledger,accounts,50000,external_email,high
+2026-04-16 03:15:33,USR-1847,bob.jones,IT,SELECT,HR_Database,salaries,500,usb_drive,restricted
+
+{
+  "user_id": "USR-0245",
+  "username": "alice.smith",
+  "department": "Finance",
+  "role": "Senior Analyst",
+  "tenure_months": 48,
+  "approved_systems": ["GL_Ledger", "AR_System"],
+  "typical_access_hours": "9-17",
+  "avg_queries_per_day": 12.5,
+  "avg_rowcount_per_query": 450,
+  "high_risk_event": false,
+  "equipment": "company_laptop"
+}
+Metric
+Target
+Why It Matters
+Precision
+> 75%
+Minimize alert fatigue for analysts
+Recall
+> 70%
+Don't miss actual threats
+F1 Score
+> 0.72
+Overall detection accuracy
+Detection Speed
+< 5 minutes
+Timely alerting
+Explainability
+4/5 stars
+Investigators understand alerts
+
+DATA ACCESS ANOMALY REPORT - 2026-04-15
+========================================
+
+Critical Alerts (Immediate Investigation)
+
+
+Alert 1: BULK EXPORT OF RESTRICTED DATA
+
+User: bob.jones (IT, 3 months tenure)
+Action: Export customer PII
+Records: 50,000 customers with SSN, email
+Destination: Personal USB drive
+Time: 2026-04-15 03:47 AM (off-hours)
+Risk Score: 96/100  CRITICAL
+
+Context:
+- First time accessing this table
+- Never exports data outside work hours
+- No business justification in tickets
+- Employee marked "high risk": Termination notice filed yesterday
+
+Recommendation: BLOCK + INVESTIGATE + audit logs from 72 hours
+
+
+Medium Alerts (Review)
+
+
+Alert 2: UNUSUAL TIMING
+User: alice.smith (Finance, 4 years tenure)
+Action: GL_Ledger query (normal access)
+Time: 21:30 (beyond normal 9-17 hours)
+Risk Score: 42/100
+Context: Month-end close in progress (expected)
+Recommendation: MONITOR
+
+2026-04-15 03:47:12,USR-0847,bob.jones,Export,PII_Database,critical,50000,personal_usb,ABNORMAL
+
+{
+  "alert_id": "ALERT-20260415-001",
+  "user_id": "USR-0847",
+  "risk_score": 96,
+  "severity": "CRITICAL",
+  "anomalies_detected": [
+    "Off-hours access (03:47 vs normal 9-17)",
+    "First-time access to restricted table",
+    "Bulk export (50k records vs typical <100)",
+    "USB export (exfiltration risk)"
+  ],
+  "business_context": "Employee filed termination notice yesterday",
+  "recommendation": "BLOCK + INVESTIGATE IMMEDIATELY"
+}
+Problem 05   GRC Process Exception & Policy Waiver Management
+Track: Policy Governance & Risk Management   |   Difficulty: Intermediate–Advanced
+
+"We need to grant admin access to the cloud engineer for
+ production troubleshooting."
+   → Create exception/waiver → Approve → But never removed
+
+"The firewall rule is blocking our integration with Partner Ltd
+ so we need to open port 8080."
+   → Creates temporary exception → 18 months later, still open
+
+"New hire can't access systems until background check completes
+ (7 days) but needs to start training today."
+   → Exception granted → Forgotten when background check completes
+
+  Requested → Reviewed → Approved → Active →
+  Renewal Requested → Re-approved → Revoked/Expired
+
+  exceptions (
+    id, type, requester, approver, justification,
+    start_date, end_date, status, risk_level,
+    related_policy, business_context
+  )
+File
+Records
+Coverage
+Description
+`exception_registry.csv`
+600
+Full 365 days (Apr 2025 – Apr 2026)
+All exceptions: type, requester, approver, justification, lifecycle dates
+`exception_labels.csv`
+600
+All exceptions
+Ground truth: is_anomaly, anomaly_type, severity, explanation
+
+import pandas as pd
+from sklearn.metrics import classification_report
+
+labels = pd.read_csv('exception_labels.csv')
+# labels['predicted_anomaly'] = your_system.assess(exception_registry)
+
+print(classification_report(
+    labels['is_anomaly'],
+    labels['predicted_anomaly'],
+    target_names=['Compliant', 'At-Risk Exception']
+))
+
+# Also useful: what % of CRITICAL exceptions did you catch?
+critical = labels[labels['severity'] == 'CRITICAL']
+critical_caught = labels.loc[critical.index]['predicted_anomaly'].sum()
+print(f"Critical exception detection rate: {critical_caught}/{len(critical)}")
+
+exception_id,type,requester,approver,justification,start_date,end_date,status,risk_level
+EXC-001,admin_access,john.doe,alice.smith,Production troubleshooting,2026-02-15,2026-04-15,ACTIVE,HIGH
+EXC-002,firewall_rule_open,ops.team,bob.jones,Integration with Partner Ltd,2025-11-20,2026-04-20,ACTIVE,MEDIUM
+EXC-003,encryption_waiver,dev.lead,security.lead,Legacy system compatibility,2023-06-01,2024-06-01,EXPIRED,HIGH
+Metric
+Target
+Why
+Exception Visibility
+100% tracked
+Know all active exceptions
+Expiry Alert Accuracy
+95%+
+Don't miss renewals
+Risk Scoring
+Correlates with audits
+Correctly identifies risky exceptions
+Operational Efficiency
+50% less manual tracking
+Team time saved
+Audit Readiness
+1-hour report generation
+Non-emergency audits supported
+
+EXCEPTION PORTFOLIO SUMMARY
+===========================
+Report Date: 2026-04-15
+Time Range: 2026-01-15 to 2026-04-15
+
+EXECUTIVE SUMMARY
+
+Total Active Exceptions: 182
+  - HIGH Risk: 23 (requires immediate attention)
+  - MEDIUM Risk: 78
+  - LOW Risk: 81
+
+Expiring This Month: 12 (8 due for renewal decision)
+Expired (Not Revoked): 3 (should be closed)
+
+BREAKDOWN BY TYPE
+
+Admin/Root Access: 45 (HIGH RISK)
+Firewall Rules: 67 (MEDIUM RISK)
+Encryption Waivers: 12 (HIGH RISK)
+Other: 58 (LOW/MEDIUM RISK)
+
+TOP HIGH-RISK EXCEPTIONS
+
+1. USR-1234 Admin access to Production (since Nov 2024) — 5 MONTHS OLD
+2. Partner API access to GL_System (since Jan 2026) — No renewal in 90 days
+3. Legacy system encryption waiver (since 2022) — 2+ YEARS
+
+RECOMMENDATIONS
+
+→ Review & revoke admin access for USR-1234 (long-duration, should be temporary)
+→ Request renewal justification for Partner API (3 months old, needs review)
+→ Accelerate legacy system encryption upgrade (2-year waiver is not sustainable)
+
+NEXT AUDIT READINESS
+
+ All exceptions documented
+ 95% have approvals recorded
+ 8 exceptions overdue for review
+ 3 exceptions not revoked after expiry
+
+{
+  "exception_id": "EXC-00145",
+  "type": "ADMIN_ACCESS",
+  "requester": "USR-1234",
+  "approver": "manager-001",
+  "start_date": "2025-11-15",
+  "end_date": "2025-12-15",
+  "status": "ACTIVE",
+  "renewal_count": 0
+}
+
+{
+  "exception_id": "EXC-00145",
+  "risk_level": "CRITICAL",
+  "alerts": [
+    "EXPIRED_NOT_REVOKED: End date 2025-12-15 passed; still marked active",
+    "OVERDUE_RENEWAL: Should have been renewed 4 months ago",
+    "ELEVATED_PRIVILEGE: Admin access should be strictly temporary"
+  ],
+  "recommendation": "REVOKE IMMEDIATELY - was temporary, now 4 months overdue"
+}
+Problem 06   Third-Party & Vendor Risk Management
+Track: Third-Party Risk & Governance   |   Difficulty: Intermediate–Advanced
+
+Q: "Does our backup vendor have SOC 2 certification?"
+A: "Uh, let me check... no one knows. It's an email from 2022."
+
+Q: "What data does Vendor X have access to?"
+A: "Main database? Customer profiles? Not sure."
+
+Q: "Our Payroll vendor was breached. Do we have a contract clause?"
+A: "Found a PDF on someone's old machine. No risk assessment."
+
+Q: "Can we use this new SaaS app?"
+A: "IT security hasn't reviewed it yet. Been blocked for 3 months."
+
+Result: Business moves at 10 mph because security can't answer simple questions.
+
+  Vendor Risk = (Data_Sensitivity × Access_Scope) +
+                Compliance_Gaps + Breach_History +
+                Financial_Health
+
+  Data Sensitivity: 1-10 (does vendor touch PII? Financials?)
+  Access Scope: 1-10 (number of systems, read/write)
+  Compliance: 1-10 (missing certifications, controls)
+  Breach History: Points per incident (recent = more points)
+  Financial: 1-10 (Dun & Bradstreet score, viability)
+File
+Records
+Description
+`vendor_registry.csv`
+400
+All vendors: type, certifications+expiry dates, breach status, risk score, annual spend, contract dates
+`vendor_labels.csv`
+400
+Ground truth: is_anomaly, anomaly_type, severity, expired_certifications, explanation
+Anomaly Type
+Severity
+Example
+`BREACHED_VENDOR_HIGH_ACCESS`
+CRITICAL
+Vendor breached in last 12mo + has PII/Financial access
+`VENDOR_UNDER_INVESTIGATION`
+CRITICAL
+Vendor currently under security investigation
+`HIGH_RISK_SCORE`
+HIGH
+Risk score > 80/100
+`EXPIRED_CERTIFICATION`
+HIGH/MEDIUM
+SOC2/ISO27001 expired on vendor with sensitive data access
+`RECENTLY_BREACHED_VENDOR`
+MEDIUM
+Breach in last 12 months (lower scope)
+`CONTRACT_EXPIRED_ACTIVE_ACCESS`
+MEDIUM
+Contract ended, potential orphaned access
+`ELEVATED_RISK_VENDOR`
+LOW
+Risk score 65-80 — increased monitoring
+
+import pandas as pd
+from sklearn.metrics import precision_score, recall_score
+
+labels = pd.read_csv('vendor_labels.csv')
+# labels['predicted_anomaly'] = your_model.score_vendors(vendor_registry)
+
+y_true = labels['is_anomaly'].astype(int)
+y_pred = labels['predicted_anomaly'].astype(int)
+
+print(f"Precision: {precision_score(y_true, y_pred):.2%}")
+print(f"Recall:    {recall_score(y_true, y_pred):.2%}")
+
+# Priority check: CRITICAL vendors should always be caught
+critical = labels[labels['severity'] == 'CRITICAL']
+print(f"CRITICAL vendor recall: {labels.loc[critical.index]['predicted_anomaly'].mean():.2%}")
+
+{
+  "vendor_id": "VND-0285",
+  "name": "CloudBackup Inc",
+  "category": "Backup & Disaster Recovery",
+  "contract_start": "2023-06-01",
+  "contract_end": "2026-06-01",
+  "data_access": {
+    "systems": ["Database_Primary", "FileServer_Corporate"],
+    "data_sensitivity": "HIGH",
+    "access_type": "read_write"
+  },
+  "compliance": {
+    "soc2_type2": true,
+    "soc2_expiry": "2026-09-15",
+    "iso27001": false,
+    "gdpr_dpa": true
+  },
+  "breach_history": [
+    {
+      "date": "2024-01-15",
+      "severity": "MEDIUM",
+      "description": "Unencrypted backup exposed on S3"
+    }
+  ],
+  "financial_rating": "B",
+  "current_risk_score": 65,
+  "risk_level": "MEDIUM"
+}
+Metric
+Target
+Why
+Vendor Coverage
+95%+ vendors tracked
+Know all third-party risk
+Risk Accuracy
+80%+ align with auditor judgment
+Scoring is meaningful
+Alert Timeliness
+Contract/cert alerts 30+ days early
+Time for action
+Operational Efficiency
+5 min to answer "Is vendor X compliant?"
+Enable business
+Audit Readiness
+15 min to generate vendor risk report
+Auditors satisfied
+
+VENDOR RISK PORTFOLIO
+=====================
+Report Date: 2026-04-15
+Total Vendors Tracked: 147
+
+RISK SUMMARY
+
+ LOW Risk: 89 vendors (61%)
+ MEDIUM Risk: 45 vendors (31%)
+ HIGH Risk: 13 vendors (8%)
+
+RED FLAG VENDORS (Require Immediate Attention)
+
+
+1. CyberBackup Solutions (VND-0285)
+   Risk Score: 7.8/10 [HIGH]
+   Issues:
+    Known breach (Jan 2024): Unencrypted backups exposed
+    SOC 2 Type II expires in 60 days (renewal status?)
+    No GDPR DPA on file
+   Access: Database + File Server (HIGH sensitivity)
+   Action Required: Schedule compliance meeting
+
+2. LegacyIntegration Corp (VND-0401)
+   Risk Score: 7.5/10 [HIGH]
+   Issues:
+    Financial rating: C (viability concern)
+    No SOC 2, ISO 27001
+    Contract SLA vague on breach notification
+    Limited data access (read-only, medium sensitivity)
+   Action Required: Contract renegotiation or replacement
+
+3. DevOps Contractor Team (VND-0512)
+   Risk Score: 6.9/10 [MEDIUM-HIGH]
+   Issues:
+    Individual contractor (single point of failure)
+    Background check due 45 days ago
+    Limited access, 6-month contract
+   Action Required: Extend access review, contract renewal decision
+
+AUDIT-READY COMPLIANCE
+
+ 95% vendor coverage (143 of 150 key vendors tracked)
+ GDPR DPA: 92% of vendors with data access have DPA
+ SOC 2 Compliance: 78% (15 vendors awaiting new assessments)
+ Contract Terms: 8 contracts need renewal/renegotiation
+
+NEW VENDOR ONBOARDING (Last 30 Days)
+
+2 new vendors added
+Both require initial security assessment
+Assessment template and process: [LINK]
+
+{
+  "vendor_id": "VND-0285",
+  "name": "CyberBackup Solutions",
+  "data_access": ["Backup_Database", "File_Server"],
+  "soc2_expiry": "2026-06-15",
+  "breach_history": ["Jan 2024: Unencrypted backups exposed"],
+  "financial_rating": "A-",
+  "gdpr_dpa": false
+}
+
+{
+  "vendor_id": "VND-0285",
+  "risk_score": 7.8,
+  "risk_level": "HIGH",
+  "risk_factors": [
+    "Recent breach (Jan 2024): Unencrypted data exposed, potentially including backups",
+    "SOC 2 expires in 60 days: Certification gap risk",
+    "Missing GDPR DPA agreement despite processing EU data",
+    "High-sensitivity data access (backups = full database copies)"
+  ],
+  "recommendation": "Schedule urgent compliance meeting; consider alternative vendor"
+}
